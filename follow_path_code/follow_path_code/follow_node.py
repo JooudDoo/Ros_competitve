@@ -23,11 +23,12 @@ OFFSET_BTW_CENTERS = 5
 DEBUG_LEVEL : Literal[0, 1, 2, 3, 4] = 3
 
 # Если потерял линию то стараться повернуть к ней?
+# или наоборот держаться той линии что осталась, но на каком-то растоянии? (среднем за предыдущие время от этой линии)
 # Что-то сделать со скоростями, PID регулятор?
 
 class Follow_Trace_Node(Node):
 
-    def __init__(self, linear_speed = 0.2, angular_speed=0.2, linear_slow_speed=None):
+    def __init__(self, linear_speed = 0.1, angular_speed=0.2, linear_slow_speed=None):
         super().__init__("Follow_Trace_Node")
 
         self._robot_Ccamera_sub = self.create_subscription(Image, "/color/image", self._callback_Ccamera, 3)
