@@ -113,11 +113,14 @@ class Follow_Trace_Node(Node):
         emptyTwist = Twist()
         emptyTwist.linear.x = self._linear_speed
 
+        # обрабатываем изо с камеры
         cvImg = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding=msg.encoding)
         cvImg = cv2.cvtColor(cvImg, cv2.COLOR_RGB2BGR)
 
+        # получаем изо перед колесами
         persective = self.__warpPerspective(cvImg)
 
+        # получаем координаты края желтой линии и белой
         endYellow, hYellow  = self._find_yellow_line(persective)
         startWhite, hWhite = self._find_white_line(persective)
 
@@ -128,9 +131,7 @@ class Follow_Trace_Node(Node):
         center_crds = (w//2, hYellow)
         lines_center_crds = (middle_btw_lines, hYellow)
 
-        persective_drawed = cv2.rectangle(persective, center_crds, center_crds, (0, 255, 0), 5) # Центр изо
-        persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5) # центр точки между линиями
-
+        # Выравниваем наш корабль
         if(abs(center_crds[0] - lines_center_crds[0]) > OFFSET_BTW_CENTERS): # если центры расходятся больше чем нужно
             if DEBUG_LEVEL >= 1:
                 self.get_logger().info(f"Rotating dist: {abs(center_crds[0] - lines_center_crds[0])}")
@@ -144,6 +145,10 @@ class Follow_Trace_Node(Node):
 
 
         if DEBUG_LEVEL >= 1:
+            # рисуем точки 
+            persective_drawed = cv2.rectangle(persective, center_crds, center_crds, (0, 255, 0), 5) # Центр изо 
+            persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5) # центр точки между линиями
+            # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
             cv2.imshow("img", persective_drawed)
             cv2.waitKey(1)
         
