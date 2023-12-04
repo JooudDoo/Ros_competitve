@@ -30,8 +30,6 @@ DEBUG_LEVEL : Literal[0, 1, 2, 3, 4] = 2
 # Если потерял линию то стараться повернуть к ней?
 # или наоборот держаться той линии что осталась, но на каком-то растоянии? (среднем за предыдущие время от этой линии)
 # Что-то сделать со скоростями, PID регулятор?
-
-
 class Follow_Trace_Node(Node):
 
     def __init__(self, linear_speed = 0.1, angular_speed=0.2, linear_slow_speed=None):
@@ -66,15 +64,18 @@ class Follow_Trace_Node(Node):
         self.dt = 1
         self.old_e = 0
         self.E = 0
-        
+
+    # Обратный вызов для получения данных о положении    
     def pose_callback(self, data):
         self.pose = data
 
+    # Получение угла поворота из данных о положении
     def get_angle(self):
         quaternion = (self.pose.pose.pose.orientation.x, self.pose.pose.pose.orientation.y, self.pose.pose.pose.orientation.z,self.pose.pose.pose.orientation.w) 
         euler = euler_from_quaternion(quaternion) 
         return euler[2]
-        
+    
+    # Преобразование перспективы изображения 
     def __warpPerspective(self, cvImg):
         h, w, _ = cvImg.shape
         top_x_offset = 50
@@ -95,7 +96,7 @@ class Follow_Trace_Node(Node):
         
         return cv2.flip(dst, 0)
     
-
+    # Поиск желтой линии на изображении
     def _find_yellow_line(self, perspectiveImg):
         h, w, _ = perspectiveImg.shape
         middle_h = h // 2
@@ -117,6 +118,7 @@ class Follow_Trace_Node(Node):
 
         return (first_notYellow, middle_h)
 
+    # Поиск белой линии на изображении
     def _find_white_line(self, perspectiveImg):
         h, w, _ = perspectiveImg.shape
         middle_h = h // 2
@@ -138,6 +140,7 @@ class Follow_Trace_Node(Node):
 
         return (first_white, middle_h)
     
+    # Расчет новой угловой скорости с использованием PID-регулятора
     def _compute_PID(self, target):
         # расчет новой угловой скорости с помощью PID-регулятора
         err = target
@@ -154,7 +157,8 @@ class Follow_Trace_Node(Node):
         self.E = self.E + e
         self.old_e = e
         return w
-        
+    
+    # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg : Image):
         emptyTwist = Twist()
         emptyTwist.linear.x = self._linear_speed
@@ -204,15 +208,9 @@ class Follow_Trace_Node(Node):
         if DEBUG_LEVEL < 4:
             self._robot_cmd_vel_pub.publish(emptyTwist)
 
-
-
 def main():
     rclpy.init()
-
     FTN = Follow_Trace_Node()
-
     rclpy.spin(FTN)
-
     FTN.destroy_node()
-
     rclpy.shutdown()
