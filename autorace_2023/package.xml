@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model
+  href="http://download.ros.org/schema/package_format3.xsd"
+  schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autorace_2023</name>
+  <version>0.1.0</version>
+  <description>
+    AutoRace 2023 ROS2 Humble packages (meta package)
+  </description>
+  <license>Apache 2.0</license>
+  <author email="v.kudinov@g.nsu.ru">Vitalii Kudinov</author>
+  <author>Vitalii Kudinov</author>
+  <maintainer email="v.kudinov@g.nsu.ru">Vitalii Kudinov</maintainer>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>autorace_camera</exec_depend>
+  <exec_depend>autorace_core</exec_depend>
+  <exec_depend>autorace_detect</exec_depend>
+  <exec_depend>autorace_driving</exec_depend>
+  <exec_depend>autorace_msgs</exec_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
