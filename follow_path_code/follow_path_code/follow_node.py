@@ -10,6 +10,7 @@ from cv_bridge import CvBridge,CvBridgeError
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, Point, Quaternion
 from tf_transformations import euler_from_quaternion
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 import cv2
 import math
@@ -54,9 +55,14 @@ class Follow_Trace_Node(Node):
         self.__white_prevs.append(0)
         
         self.pose = Odometry()
-        self.Kp = 1.0
-        self.Ki = 0.1
-        self.Kd = 0.1
+        #self.Kp = 1.0
+        #self.Ki = 0.1
+        #self.Kd = 0.1
+        
+        self.Kp = self.declare_parameter('Kp', value = 1.0, descriptor = ParameterDescriptor(type = ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
+        self.Ki = self.declare_parameter('Ki', value = 0.1, descriptor = ParameterDescriptor(type = ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
+        self.Kd = self.declare_parameter('Kd', value = 0.1, descriptor = ParameterDescriptor(type = ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
+        
         self.dt = 1
         self.old_e = 0
         self.E = 0
