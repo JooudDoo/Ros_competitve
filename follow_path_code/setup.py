@@ -13,6 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
+       # (os.path.join('share', package_name, 'signs')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -23,7 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "follow_node = follow_path_code.follow_node:main"
+            "follow_node = follow_path_code.follow_node:main",
+            "detect_signs = follow_path_code.detect_signs:main"
         ],
     },
 )
