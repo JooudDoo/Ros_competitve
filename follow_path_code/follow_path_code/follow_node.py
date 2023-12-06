@@ -3,7 +3,18 @@ from collections import deque
 
 # модули
 # конфигуратор
-from module.config import OFFSET_BTW_CENTERS, DEBUG_LEVEL
+from module.config import (
+    OFFSET_BTW_CENTERS, 
+    DEBUG_LEVEL, 
+    LINES_H_RATIO,
+    MAXIMUM_ANGLUAR_SPEED_CAP,
+    MAX_LINIEAR_SPEED,
+
+    FOLLOW_ROAD_MODE,
+    WHITE_MODE_CONSTANT,
+    YELLOW_MODE_CONSTANT,
+    FOLLOW_ROAD_CROP_HALF,
+    )
 # обработка светофора
 from module.traffic_lights import check_traffic_lights
 
@@ -22,13 +33,12 @@ import cv2
 import math
 import numpy as np
 
-# Если потерял линию то стараться повернуть к ней?
-# или наоборот держаться той линии что осталась, но на каком-то растоянии? (среднем за предыдущие время от этой линии)
-# Что-то сделать со скоростями, PID регулятор?
 class Follow_Trace_Node(Node):
 
-    def __init__(self, linear_speed=0.1, angular_speed=0.2, linear_slow_speed=None):
+    def __init__(self, linear_speed=MAX_LINIEAR_SPEED):
         super().__init__("Follow_Trace_Node")
+
+        self.point_status = True # статус центровой точки дороги (True - актуально, False - устарела)
 
         self._pose_sub = self.create_subscription(
             Odometry, '/odom', self.pose_callback, 10)
@@ -38,11 +48,6 @@ class Follow_Trace_Node(Node):
         self._cv_bridge = CvBridge()
 
         self._linear_speed = linear_speed
-        self.angular_speed = angular_speed
-        self._linear_slow_speed = linear_slow_speed
-
-        if self._linear_slow_speed is None:
-            self._linear_slow_speed = self._linear_speed / 5
 
         self.__yellow_prevs = deque(maxlen=10)
         self.__white_prevs = deque(maxlen=10)
@@ -51,17 +56,17 @@ class Follow_Trace_Node(Node):
 
         self.pose = Odometry()
 
-        self.Kp = self.declare_parameter('Kp', value=2.0, descriptor=ParameterDescriptor(
+        self.Kp = self.declare_parameter('Kp', value=3.0, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
-        self.Ki = self.declare_parameter('Ki', value=0.1, descriptor=ParameterDescriptor(
+        self.Ki = self.declare_parameter('Ki', value=1, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
-        self.Kd = self.declare_parameter('Kd', value=0.1, descriptor=ParameterDescriptor(
+        self.Kd = self.declare_parameter('Kd', value=0.25, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
 
         self.old_e = 0
         self.E = 0
 
-        self.STATUS_CAR = 0
+        self.STATUS_CAR = 1
         self.TASK_LEVEL = 0
 
     # Обратный вызов для получения данных о положении
@@ -101,10 +106,16 @@ class Follow_Trace_Node(Node):
         return cv2.flip(dst, 0)
 
     # Поиск желтой линии на изображении
-    def _find_yellow_line(self, perspectiveImg):
+    def _find_yellow_line(self, perspectiveImg_, middle_h = None):
+        if FOLLOW_ROAD_CROP_HALF:
+            h_, w_, _ = perspectiveImg_.shape
+            perspectiveImg = perspectiveImg_[:, :w_//2, :]
+        else:
+            perspectiveImg = perspectiveImg_
+
         h, w, _ = perspectiveImg.shape
-        middle_h = h // 2
-        # middle_h = middle_h + h // 2
+        if middle_h is None:
+            middle_h = int(h * LINES_H_RATIO)
 
         yellow_mask = cv2.inRange(perspectiveImg, (0, 240, 255), (0, 255, 255))
         yellow_mask = cv2.dilate(yellow_mask, np.ones((2, 2)), iterations=4)
@@ -116,6 +127,7 @@ class Follow_Trace_Node(Node):
         except:  # Если не смогли найти линию пользуемся последними данными о ней, в надежде что починится само
             first_notYellow = sum(
                 self.__yellow_prevs)//len(self.__yellow_prevs)
+            self.point_status = False
 
         if DEBUG_LEVEL >= 3:
             # рисуем линию откуда идет конец желтой полосы
@@ -124,13 +136,22 @@ class Follow_Trace_Node(Node):
             cv2.imshow("img_y", a)
             cv2.waitKey(1)
 
-        return (first_notYellow, middle_h)
+        return first_notYellow
 
     # Поиск белой линии на изображении
-    def _find_white_line(self, perspectiveImg):
+    def _find_white_line(self, perspectiveImg_, middle_h = None):
+        fix_part = 0 # значения для исправления обрезки пополам
+
+        if FOLLOW_ROAD_CROP_HALF:
+            h_, w_, _ = perspectiveImg_.shape
+            perspectiveImg = perspectiveImg_[:, w_//2:, :]
+            fix_part = w_//2
+        else:
+            perspectiveImg = perspectiveImg_
+
         h, w, _ = perspectiveImg.shape
-        middle_h = h // 2
-        # middle_h = middle_h + h // 2
+        if middle_h is None:
+            middle_h = int(h * LINES_H_RATIO)
 
         white_mask = cv2.inRange(
             perspectiveImg, (250, 250, 250), (255, 255, 255))
@@ -141,6 +162,7 @@ class Follow_Trace_Node(Node):
             self.__white_prevs.append(first_white)
         except:  # Если не смогли найти линию пользуемся последними данными о ней, в надежде что починится само
             first_white = sum(self.__white_prevs)//len(self.__white_prevs)
+            self.point_status = False
 
         if DEBUG_LEVEL >= 3:
             # рисуем линию откуда идет конец белой полосы
@@ -149,7 +171,7 @@ class Follow_Trace_Node(Node):
             cv2.imshow("img_w", a)
             cv2.waitKey(1)
 
-        return (first_white, middle_h)
+        return first_white + fix_part
 
     # Расчет новой угловой скорости с использованием PID-регулятора
     def _compute_PID(self, target):
@@ -171,6 +193,8 @@ class Follow_Trace_Node(Node):
 
     # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg: Image):
+        self.point_status = True
+
         emptyTwist = Twist()
         emptyTwist.linear.x = self._linear_speed
 
@@ -180,48 +204,57 @@ class Follow_Trace_Node(Node):
         cvImg = cv2.cvtColor(cvImg, cv2.COLOR_RGB2BGR)
 
         # получаем изо перед колесами
-        persective = self.__warpPerspective(cvImg)
+        perspective = self.__warpPerspective(cvImg)
+        perspective_h, persective_w, _ = perspective.shape
+
+        hLevelLine = int(perspective_h*LINES_H_RATIO)
 
         # получаем координаты края желтой линии и белой
-        endYellow, hYellow = self._find_yellow_line(persective)
-        startWhite, hWhite = self._find_white_line(persective)
-
-        h, w, _ = persective.shape
+        if FOLLOW_ROAD_MODE == "WHITE":
+            endYellow = WHITE_MODE_CONSTANT
+        else:
+            endYellow = self._find_yellow_line(perspective, hLevelLine)
+        if FOLLOW_ROAD_MODE == "YELLOW":
+            startWhite = YELLOW_MODE_CONSTANT
+        else:
+            startWhite = self._find_white_line(perspective, hLevelLine)
 
         middle_btw_lines = (startWhite + endYellow) // 2
 
-        center_crds = (w//2, hYellow)
-        lines_center_crds = (middle_btw_lines, hYellow)
+        center_crds = (persective_w//2, hLevelLine)
+        lines_center_crds = (middle_btw_lines, hLevelLine)
 
         # центр справа - положительно, центр слева - отрицательно
         direction = center_crds[0] - lines_center_crds[0]
 
         # обработка первой таски, светофор
         if self.TASK_LEVEL == 0:
-            check_traffic_lights(self, persective)
+            check_traffic_lights(self, perspective)
 
         # Выравниваем наш корабль
         # если центры расходятся больше чем нужно
         if (abs(direction) > OFFSET_BTW_CENTERS):
             angle_to_goal = math.atan2(
                 direction, 215)
-            # if DEBUG_LEVEL >= 1:
-                # self.get_logger().info(
-                #     f"Rotating dist: {abs(direction)}")
-                # self.get_logger().info(f"Angle Error: {angle_to_goal}")
+            if DEBUG_LEVEL >= 1:
+                self.get_logger().info(
+                    f"Rotating dist: {abs(direction)}")
+                self.get_logger().info(f"Angle Error: {angle_to_goal}")
             angular_v = self._compute_PID(angle_to_goal)
             emptyTwist.angular.z = angular_v
-            # self.get_logger().info(f"Angle Speed: {angular_v}")
-            # self.get_logger().info("----------------------------")
+            self.get_logger().info(f"Angle Speed: {angular_v}")
+            self.get_logger().info("----------------------------")
 
-            emptyTwist.linear.x = self._linear_slow_speed
+            emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
 
         if DEBUG_LEVEL >= 1:
             # рисуем точки
             persective_drawed = cv2.rectangle(
-                persective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
-            persective_drawed = cv2.rectangle(
-                persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
+                perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
+            if self.point_status:
+                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
+            else:
+                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
             # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
             cv2.imshow("img", persective_drawed)
             cv2.waitKey(1)
