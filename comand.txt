@@ -14,3 +14,6 @@ ros2 launch follow_path_code autorace_core.launch.py
 cd sorev/v2
 . install/setup.bash
 ros2 launch autorace_camera core_node_mission
+
+
+aboba
