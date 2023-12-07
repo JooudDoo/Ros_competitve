@@ -17,6 +17,7 @@ from module.config import (
     )
 # обработка светофора
 from module.traffic_lights import check_traffic_lights
+from module.parking_space import parking
 
 import rclpy
 from rclpy.node import Node
@@ -28,6 +29,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, Point, Quaternion
 from tf_transformations import euler_from_quaternion
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
+from sensor_msgs.msg import LaserScan
 
 import cv2
 import math
@@ -36,6 +38,17 @@ import numpy as np
 class Follow_Trace_Node(Node):
 
     def __init__(self, linear_speed=MAX_LINIEAR_SPEED):
+        """
+        Основная логика
+        > point_status - статус центровой точки дороги (True - актуально, False - устарела),
+
+        > pose - позиция машинки
+
+        > STATUS_CAR - статус машинки (0 - стоп, 1 - ехать),
+
+        > TASK_LEVEL - уровень задания которое нужно выполнить (0: светофор, 1: движение, 2: перекресток, 
+                                                                3: движение, 4: обход преград, 5: парковка)
+        """
         super().__init__("Follow_Trace_Node")
 
         self.point_status = True # статус центровой точки дороги (True - актуально, False - устарела)
@@ -48,6 +61,8 @@ class Follow_Trace_Node(Node):
         self._cv_bridge = CvBridge()
 
         self._linear_speed = linear_speed
+        self._lidar_sub = self.create_subscription(
+            LaserScan, '/lidar_topic', self.lidar_callback, 10)
 
         self.__yellow_prevs = deque(maxlen=10)
         self.__white_prevs = deque(maxlen=10)
@@ -58,7 +73,7 @@ class Follow_Trace_Node(Node):
 
         self.Kp = self.declare_parameter('Kp', value=3.0, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
-        self.Ki = self.declare_parameter('Ki', value=1, descriptor=ParameterDescriptor(
+        self.Ki = self.declare_parameter('Ki', value=1.0, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
         self.Kd = self.declare_parameter('Kd', value=0.25, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
@@ -66,8 +81,8 @@ class Follow_Trace_Node(Node):
         self.old_e = 0
         self.E = 0
 
-        self.STATUS_CAR = 1
-        self.TASK_LEVEL = 0
+        self.STATUS_CAR = 0
+        self.TASK_LEVEL = 5
 
     # Обратный вызов для получения данных о положении
     def pose_callback(self, data):
@@ -191,8 +206,18 @@ class Follow_Trace_Node(Node):
         self.old_e = e
         return w
 
+    def lidar_callback(self, msg: LaserScan):
+        # Обработка данных лидара
+        ranges = msg.ranges
+        print('asd', self.TASK_LEVEL)
+
+        # # если у нас задание с парковкой
+        # if self.TASK_LEVEL == 5:
+        #     parking(self, ranges)
+
     # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg: Image):
+
         self.point_status = True
 
         emptyTwist = Twist()
@@ -227,41 +252,41 @@ class Follow_Trace_Node(Node):
         # центр справа - положительно, центр слева - отрицательно
         direction = center_crds[0] - lines_center_crds[0]
 
-        # обработка первой таски, светофор
-        if self.TASK_LEVEL == 0:
-            check_traffic_lights(self, perspective)
+        # # ------- обработка первой таски, светофор ------
+        # if self.TASK_LEVEL == 0:
+        #     check_traffic_lights(self, perspective)
 
-        # Выравниваем наш корабль
-        # если центры расходятся больше чем нужно
-        if (abs(direction) > OFFSET_BTW_CENTERS):
-            angle_to_goal = math.atan2(
-                direction, 215)
-            if DEBUG_LEVEL >= 1:
-                self.get_logger().info(
-                    f"Rotating dist: {abs(direction)}")
-                self.get_logger().info(f"Angle Error: {angle_to_goal}")
-            angular_v = self._compute_PID(angle_to_goal)
-            emptyTwist.angular.z = angular_v
-            self.get_logger().info(f"Angle Speed: {angular_v}")
-            self.get_logger().info("----------------------------")
+        # # Выравниваем наш корабль
+        # # если центры расходятся больше чем нужно
+        # if (abs(direction) > OFFSET_BTW_CENTERS):
+        #     angle_to_goal = math.atan2(
+        #         direction, 215)
+        #     # if DEBUG_LEVEL >= 1:
+        #         # self.get_logger().info(
+        #         #     f"Rotating dist: {abs(direction)}")
+        #         # self.get_logger().info(f"Angle Error: {angle_to_goal}")
+        #     angular_v = self._compute_PID(angle_to_goal)
+        #     emptyTwist.angular.z = angular_v
+        #     self.get_logger().info(f"Angle Speed: {angular_v}")
+        #     self.get_logger().info("----------------------------")
 
-            emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
+        #     emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
 
-        if DEBUG_LEVEL >= 1:
-            # рисуем точки
-            persective_drawed = cv2.rectangle(
-                perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
-            if self.point_status:
-                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
-            else:
-                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
-            # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
-            cv2.imshow("img", persective_drawed)
-            cv2.waitKey(1)
+        # if DEBUG_LEVEL >= 1:
+        #     # рисуем точки
+        #     persective_drawed = cv2.rectangle(
+        #         perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
+        #     if self.point_status:
+        #         persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
+        #     else:
+        #         persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
+        #     # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
+        #     cv2.imshow("img", persective_drawed)
+        #     cv2.waitKey(1)
 
-        # изменение управление машинкой
-        if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1:
-            self._robot_cmd_vel_pub.publish(emptyTwist)
+        # # изменение управление машинкой
+        # if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1:
+        #     self._robot_cmd_vel_pub.publish(emptyTwist)
 
 
 def main():
