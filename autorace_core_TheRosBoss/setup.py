@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'follow_path_code'
+package_name = 'autorace_core_TheRosBoss'
 
 setup(
     name=package_name,
@@ -13,7 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
-       # (os.path.join('share', package_name, 'signs')),
+        (os.path.join('share', package_name, 'signs'), glob(os.path.join("signs", "*.[png]*"))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,8 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "follow_node = follow_path_code.follow_node:main",
-            "detect_signs = follow_path_code.detect_signs:main"
+            "follow_node = autorace_core_TheRosBoss.follow_node:main",
+            "detect_signs = autorace_core_TheRosBoss.detect_signs:main"
         ],
     },
 )

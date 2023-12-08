@@ -5,6 +5,7 @@ from collections import deque
 # конфигуратор
 from module.config import (
     OFFSET_BTW_CENTERS, 
+    TASK_LEVEL,
     DEBUG_LEVEL, 
     LINES_H_RATIO,
     MAXIMUM_ANGLUAR_SPEED_CAP,
@@ -15,16 +16,20 @@ from module.config import (
     YELLOW_MODE_CONSTANT,
     FOLLOW_ROAD_CROP_HALF,
     )
+
 # обработка светофора
 from module.traffic_lights import check_traffic_lights
 from module.parking_space import parking
+from module.traffic_intersection import check_direction
 
 import rclpy
 from rclpy.node import Node
 
+from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, Point, Quaternion
 from tf_transformations import euler_from_quaternion
@@ -58,6 +63,7 @@ class Follow_Trace_Node(Node):
         self._robot_Ccamera_sub = self.create_subscription(
             Image, "/color/image", self._callback_Ccamera, 3)
         self._robot_cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._sign_subscriber  = self.create_subscription(String, '/sign', self._change_task, 1)
         self._cv_bridge = CvBridge()
 
         self._linear_speed = linear_speed
@@ -82,12 +88,31 @@ class Follow_Trace_Node(Node):
         self.E = 0
 
         self.STATUS_CAR = 0
-        self.TASK_LEVEL = 5
+        self.TASK_LEVEL = 0
+
+        self.MAIN_LINE = "YELLOW"
 
     # Обратный вызов для получения данных о положении
     def pose_callback(self, data):
         self.pose = data
 
+    # Переключение миссий в результате детекции знаков
+    def _change_task(self, msg):
+        task_name = msg.data
+
+        if task_name == "PedestrianCrossing":
+            self.TASK_LEVEL = 4
+        elif task_name == "TrafficConstruction":
+            self.TASK_LEVEL = 2
+        elif task_name == "TrafficIntersection":
+            self.TASK_LEVEL = 1
+        elif task_name == "TrafficParking":
+            self.TASK_LEVEL = 3
+        elif task_name == "Tunnel":
+            self.TASK_LEVEL = 5
+        elif task_name in ["YELLOW", "WHITE"]: 
+            self.MAIN_LINE = task_name
+            
     # Получение угла поворота из данных о положении
     def get_angle(self):
         quaternion = (self.pose.pose.pose.orientation.x, self.pose.pose.pose.orientation.y,
@@ -190,7 +215,6 @@ class Follow_Trace_Node(Node):
 
     # Расчет новой угловой скорости с использованием PID-регулятора
     def _compute_PID(self, target):
-        # расчет новой угловой скорости с помощью PID-регулятора
         err = target
         e = np.arctan2(np.sin(err), np.cos(err))
 
@@ -215,6 +239,18 @@ class Follow_Trace_Node(Node):
         # if self.TASK_LEVEL == 5:
         #     parking(self, ranges)
 
+    '''
+    def check_blue_color(self, img):
+        # Определение зеленого цвета в HSV
+        hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        lower_green = np.array([100, 40, 40])  # Нижняя граница диапазона зеленого цвета в HSV
+        upper_green = np.array([255, 255, 255])  # Верхняя граница диапазона зеленого цвета в HSV
+        green_mask = cv2.inRange(hsv_img, lower_green, upper_green)
+
+        # Проверка, есть ли зеленый цвет на изображении
+        return green_mask #cv2.countNonZero(green_mask) > 0
+    '''
+    
     # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg: Image):
 
@@ -235,11 +271,11 @@ class Follow_Trace_Node(Node):
         hLevelLine = int(perspective_h*LINES_H_RATIO)
 
         # получаем координаты края желтой линии и белой
-        if FOLLOW_ROAD_MODE == "WHITE":
+        if self.MAIN_LINE == "WHITE":
             endYellow = WHITE_MODE_CONSTANT
         else:
             endYellow = self._find_yellow_line(perspective, hLevelLine)
-        if FOLLOW_ROAD_MODE == "YELLOW":
+        if self.MAIN_LINE == "YELLOW":
             startWhite = YELLOW_MODE_CONSTANT
         else:
             startWhite = self._find_white_line(perspective, hLevelLine)
@@ -252,23 +288,29 @@ class Follow_Trace_Node(Node):
         # центр справа - положительно, центр слева - отрицательно
         direction = center_crds[0] - lines_center_crds[0]
 
-        # # ------- обработка первой таски, светофор ------
-        # if self.TASK_LEVEL == 0:
-        #     check_traffic_lights(self, perspective)
+        # обработка первой таски, светофор
+        if self.TASK_LEVEL == 0:
+            check_traffic_lights(self, cvImg)
 
-        # # Выравниваем наш корабль
-        # # если центры расходятся больше чем нужно
-        # if (abs(direction) > OFFSET_BTW_CENTERS):
-        #     angle_to_goal = math.atan2(
-        #         direction, 215)
-        #     # if DEBUG_LEVEL >= 1:
-        #         # self.get_logger().info(
-        #         #     f"Rotating dist: {abs(direction)}")
-        #         # self.get_logger().info(f"Angle Error: {angle_to_goal}")
-        #     angular_v = self._compute_PID(angle_to_goal)
-        #     emptyTwist.angular.z = angular_v
-        #     self.get_logger().info(f"Angle Speed: {angular_v}")
-        #     self.get_logger().info("----------------------------")
+        if self.TASK_LEVEL == 1:
+            # 480,848
+            self.get_logger().info(f"Angle: {self.get_angle()}")
+            check_direction(self, cvImg)
+
+
+        # Выравниваем наш корабль
+        # если центры расходятся больше чем нужно
+        if (abs(direction) > OFFSET_BTW_CENTERS):
+            angle_to_goal = math.atan2(
+                direction, 215)
+            #if DEBUG_LEVEL >= 1:
+                #self.get_logger().info(
+                #    f"Rotating dist: {abs(direction)}")
+               # self.get_logger().info(f"Angle Error: {angle_to_goal}")
+            angular_v = self._compute_PID(angle_to_goal)
+            emptyTwist.angular.z = angular_v
+            #self.get_logger().info(f"Angle Speed: {angular_v}")
+            #self.get_logger().info("----------------------------")
 
         #     emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
 
