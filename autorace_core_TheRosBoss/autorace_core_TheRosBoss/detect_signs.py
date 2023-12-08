@@ -7,20 +7,21 @@ from rclpy.node import Node
 from matplotlib import pyplot as plt
 
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 from cv_bridge import CvBridge
+
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 
 import cv2
 import math
 import numpy as np
 
-
-"""
-Уровни дебага
-0: нет его
-1: выводим данные с камеры
-"""
-DEBUG_LEVEL : Literal[0, 1] = 1
+from module.config import (
+    DEBUG_LEVEL, 
+    TASK_LEVEL,
+    FOLLOW_ROAD_MODE
+    )
 
 # Если потерял линию то стараться повернуть к ней?
 # или наоборот держаться той линии что осталась, но на каком-то растоянии? (среднем за предыдущие время от этой линии)
@@ -32,8 +33,22 @@ class Detect_Signs_Node(Node):
     def __init__(self):
         super().__init__("Detect_Signs_Node")
 
+        self._missions_array = []
+        self._ready_missions = ["OnlyDriving"]
+        self._intersection_checker = 0
         self._find_sign_sub = self.create_subscription(Image, "/color/image", self._callback_finder, 3)
+        self._publish_command = self.create_publisher(String, '/sign', 1)
         self._cv_bridge = CvBridge()
+
+        self.pedestrian_crossing_image = cv2.imread("autorace_core_TheRosBoss/signs/pedestrian_crossing_sign.png")
+        self.traffic_construction_image = cv2.imread("autorace_core_TheRosBoss/signs/traffic_construction.png") 
+        self.traffic_intersection_image = cv2.imread("autorace_core_TheRosBoss/signs/traffic_intersection.png") 
+        self.traffic_parking_image = cv2.imread("autorace_core_TheRosBoss/signs/traffic_parking.png")
+        self.tunnel_image = cv2.imread("autorace_core_TheRosBoss/signs/tunnel.png")
+
+        self.traffic_left_image = self.__reduce_brightness(cv2.imread("autorace_core_TheRosBoss/signs/traffic_left.png")[:250, :])
+        self.traffic_right_image = self.__reduce_brightness(cv2.imread("autorace_core_TheRosBoss/signs/traffic_right.png")[:250, :])
+
 
 
     def __angle3pt(self, a, b, c):
@@ -45,6 +60,13 @@ class Detect_Signs_Node(Node):
         ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
         return ang + 360 if ang < 0 else ang
 
+    def __reduce_brightness(self, img):
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h,s,v = cv2.split(img)
+        v = np.clip(v, 0, 210)
+        img = cv2.merge((h,s,v))
+        img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+        return img
 
     def __detect_sign(self, query_img, train_img, min_matches, my_color, text): 
         """
@@ -62,15 +84,14 @@ class Detect_Signs_Node(Node):
         - angle - угол между прямыми, выделяющими найденный объект
         """
 
-        flag, founded = 0, 0
-        train_img_copy = train_img.copy()
+        flag = 0
 
         while (flag!=1):
             # обнаружение на фото ключевых точек и вычисление для них дескриптора =ORB
             orb = cv2.ORB_create(nfeatures=15000)
 
             features1, des1 = orb.detectAndCompute(query_img, None)
-            features2, des2 = orb.detectAndCompute(train_img_copy, None)
+            features2, des2 = orb.detectAndCompute(train_img, None)
             
             # сопоставить точки шаблона с точками изображения через Brute-Force Matching
             bf = cv2.BFMatcher(cv2.NORM_HAMMING)
@@ -78,7 +99,7 @@ class Detect_Signs_Node(Node):
             try:
                 matches = bf.knnMatch(des1, des2, k = 2)
             except cv2.error:
-                return (0, 0, train_img,train_img_copy)     
+                return (0, 0, train_img, 0,0)       
 
             good = []    
             good_without_lists = []    
@@ -97,8 +118,6 @@ class Detect_Signs_Node(Node):
             thickness = 2
 
             if len(good) >= min_matches:
-                founded = 1
-
                 src_pts = np.float32([features1[m.queryIdx].pt for m in good_without_lists]).reshape(-1, 1, 2)
                 dst_pts = np.float32([features2[m.trainIdx].pt for m in good_without_lists]).reshape(-1, 1, 2)
 
@@ -110,7 +129,7 @@ class Detect_Signs_Node(Node):
                 try:
                     dst = cv2.perspectiveTransform(pts, M)
                 except cv2.error:
-                    return (0, 0, train_img,train_img_copy)
+                    return (0, 0, train_img, 0,0)  
 
                 m = np.sort(np.reshape(dst.ravel(),(4,2)), axis = 0)
                 train_img = cv2.polylines(train_img, [np.int32(dst)], True, my_color, 2, cv2.LINE_AA)
@@ -147,22 +166,55 @@ class Detect_Signs_Node(Node):
                 return (np.argmax([i[1] for i in results]) + 1, best_result[2])
             return (0, train_img)
         
+    def __check_direction(self, train_img, traffic_left_image, traffic_right_image):
+        """
+        Ищем, какой из знаков на кадре и выводим номер миссии
+        """
+
+        detecting_result1 = self.__detect_sign(traffic_left_image, train_img.copy(), 45, (255,242,0), "left")
+        detecting_result2 = self.__detect_sign(traffic_right_image, train_img.copy(),  45, (255,242,0), "right")
+
+        results = [detecting_result1, detecting_result2]
+
+        if sum([i[1] for i in results]) == 0:
+            return (0, train_img)
+        else:
+            # выбираем ту миссию, у которой больше мэтчей, площадь выделенной формы и углы формы +- прямые
+            best_result = results[np.argmax([i[1] for i in results])]
+            #if best_result[3] > 10000 and best_result[4] >= 80 and best_result[4] <= 100:
+            return (np.argmax([i[1] for i in results]) + 1, best_result[2])
+            #return (0, train_img)
+    
     def _callback_finder(self, msg : Image):
         cvImg = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding=msg.encoding)
         cvImg = cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB)
 
         if not (cvImg is None):
-            pedestrian_crossing_image = cv2.imread("/home/alincnl/template_ws/src/follow_path_code/signs/pedestrian_crossing_sign.png")
-            traffic_construction_image = cv2.imread("/home/alincnl/template_ws/src/follow_path_code/signs/traffic_construction.png") 
-            traffic_intersection_image = cv2.imread("/home/alincnl/template_ws/src/follow_path_code/signs/traffic_intersection.png") 
-            traffic_parking_image = cv2.imread("/home/alincnl/template_ws/src/follow_path_code/signs/traffic_parking.png")
-            tunnel_image = cv2.imread("/home/alincnl/template_ws/src/follow_path_code/signs/tunnel.png")
+            ru_missions = ["OnlyDriving", "PedestrianCrossing", "TrafficConstruction", "TrafficIntersection","TrafficParking","Tunnel"]
+            ru_intersect_missions = ["looking for sign", "turn left", "turn right"]
 
-            mission, train_img = self.__check_signs(cvImg[:240, 400:], pedestrian_crossing_image, traffic_construction_image, traffic_intersection_image, traffic_parking_image, tunnel_image)
+            mission, train_img = self.__check_signs(cvImg[:240, 400:], self.pedestrian_crossing_image, self.traffic_construction_image, self.traffic_intersection_image, self.traffic_parking_image, self.tunnel_image)
+                
+            if mission != 0 and ru_missions[mission] not in self._ready_missions:
+                self._missions_array.append(ru_missions[mission])
+                
+            if mission == 0 and len(self._missions_array) != 0 and self._missions_array.count(self._missions_array[0]) >= 2:
+                msg = String()
+                msg.data = self._missions_array[0]
+                self._publish_command.publish(msg)
 
-            if DEBUG_LEVEL == 1:
-                print("Миссия: ", mission)
-                print("-------------")
+                self._ready_missions.append(self._missions_array[0])
+                self._missions_array = []
+
+
+            if DEBUG_LEVEL >= 1:
+                if mission != 0 and ru_missions[mission] not in self._ready_missions:
+                    self.get_logger().info(f"Mission: {ru_missions[mission]}")
+                    self.get_logger().info("-------------")
+
+                #print("Mission: ", ru_missions[mission])
+                #print("-------------")
+                
                 cv2.imshow("detect_signs", train_img)
                 cv2.waitKey(1)
 
