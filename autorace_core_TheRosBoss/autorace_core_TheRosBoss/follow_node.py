@@ -79,7 +79,7 @@ class Follow_Trace_Node(Node):
 
         self.Kp = self.declare_parameter('Kp', value=3.0, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
-        self.Ki = self.declare_parameter('Ki', value=1.0, descriptor=ParameterDescriptor(
+        self.Ki = self.declare_parameter('Ki', value=1, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
         self.Kd = self.declare_parameter('Kd', value=0.25, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
@@ -239,18 +239,6 @@ class Follow_Trace_Node(Node):
         # if self.TASK_LEVEL == 5:
         #     parking(self, ranges)
 
-    '''
-    def check_blue_color(self, img):
-        # Определение зеленого цвета в HSV
-        hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        lower_green = np.array([100, 40, 40])  # Нижняя граница диапазона зеленого цвета в HSV
-        upper_green = np.array([255, 255, 255])  # Верхняя граница диапазона зеленого цвета в HSV
-        green_mask = cv2.inRange(hsv_img, lower_green, upper_green)
-
-        # Проверка, есть ли зеленый цвет на изображении
-        return green_mask #cv2.countNonZero(green_mask) > 0
-    '''
-    
     # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg: Image):
 
@@ -293,8 +281,7 @@ class Follow_Trace_Node(Node):
             check_traffic_lights(self, cvImg)
 
         if self.TASK_LEVEL == 1:
-            # 480,848
-            self.get_logger().info(f"Angle: {self.get_angle()}")
+            # self.get_logger().info(f"Angle: {self.get_angle()}")
             check_direction(self, cvImg)
 
 
@@ -312,23 +299,23 @@ class Follow_Trace_Node(Node):
             #self.get_logger().info(f"Angle Speed: {angular_v}")
             #self.get_logger().info("----------------------------")
 
-        #     emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
+            emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
 
-        # if DEBUG_LEVEL >= 1:
-        #     # рисуем точки
-        #     persective_drawed = cv2.rectangle(
-        #         perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
-        #     if self.point_status:
-        #         persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
-        #     else:
-        #         persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
-        #     # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
-        #     cv2.imshow("img", persective_drawed)
-        #     cv2.waitKey(1)
+        if DEBUG_LEVEL >= 1:
+            # рисуем точки
+            persective_drawed = cv2.rectangle(
+                perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
+            if self.point_status:
+                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
+            else:
+                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
+            # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
+            cv2.imshow("img", persective_drawed)
+            cv2.waitKey(1)
 
-        # # изменение управление машинкой
-        # if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1:
-        #     self._robot_cmd_vel_pub.publish(emptyTwist)
+         # изменение управление машинкой
+        if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1:
+            self._robot_cmd_vel_pub.publish(emptyTwist)
 
 
 def main():

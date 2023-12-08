@@ -206,7 +206,8 @@ class Detect_Signs_Node(Node):
                 self._ready_missions.append(self._missions_array[0])
                 self._missions_array = []
 
-
+           # self.get_logger().info(f"ready missions: {self._ready_missions}")
+           # self.get_logger().info(f"missions arr: {self._missions_array}")
             if DEBUG_LEVEL >= 1:
                 if mission != 0 and ru_missions[mission] not in self._ready_missions:
                     self.get_logger().info(f"Mission: {ru_missions[mission]}")
