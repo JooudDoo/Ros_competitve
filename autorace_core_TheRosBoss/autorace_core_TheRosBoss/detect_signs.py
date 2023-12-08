@@ -211,7 +211,6 @@ class Detect_Signs_Node(Node):
             if DEBUG_LEVEL >= 1:
                 if mission != 0 and ru_missions[mission] not in self._ready_missions:
                     self.get_logger().info(f"Mission: {ru_missions[mission]}")
-                    self.get_logger().info("-------------")
 
                 #print("Mission: ", ru_missions[mission])
                 #print("-------------")

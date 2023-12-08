@@ -29,4 +29,4 @@ def check_direction(follow_trace, img):
         else:
             follow_trace.get_logger().info(":ПОВОРОТ НАПРАВО")
             follow_trace.MAIN_LINE = "WHITE"
-        follow_trace.TASK_LEVEL = 2
+        follow_trace.TASK_LEVEL = 1.5
