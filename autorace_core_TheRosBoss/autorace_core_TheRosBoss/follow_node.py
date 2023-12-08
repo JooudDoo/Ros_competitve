@@ -41,6 +41,17 @@ import numpy as np
 class Follow_Trace_Node(Node):
 
     def __init__(self, linear_speed=MAX_LINIEAR_SPEED):
+        """
+        Основная логика
+        > point_status - статус центровой точки дороги (True - актуально, False - устарела),
+
+        > pose - позиция машинки
+
+        > STATUS_CAR - статус машинки (0 - стоп, 1 - ехать),
+
+        > TASK_LEVEL - уровень задания которое нужно выполнить (0: светофор, 1: движение, 2: перекресток, 
+                                                                3: движение, 4: обход преград, 5: парковка)
+        """
         super().__init__("Follow_Trace_Node")
 
         self.point_status = True # статус центровой точки дороги (True - актуально, False - устарела)
@@ -54,6 +65,8 @@ class Follow_Trace_Node(Node):
         self._cv_bridge = CvBridge()
 
         self._linear_speed = linear_speed
+        self._lidar_sub = self.create_subscription(
+            LaserScan, '/lidar_topic', self.lidar_callback, 10)
 
         self.__yellow_prevs = deque(maxlen=10)
         self.__white_prevs = deque(maxlen=10)
