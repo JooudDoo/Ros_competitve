@@ -292,7 +292,7 @@ class Follow_Trace_Node(Node):
             self.MAIN_LINE = "WHITE"
             avoid_walls(self, cvImg)
 
-        self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
+        #self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
         # Выравниваем наш корабль
         # если центры расходятся больше чем нужно
         if (abs(direction) > OFFSET_BTW_CENTERS):

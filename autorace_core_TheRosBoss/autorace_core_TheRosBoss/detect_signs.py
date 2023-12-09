@@ -34,7 +34,7 @@ class Detect_Signs_Node(Node):
         super().__init__("Detect_Signs_Node")
 
         self._missions_array = []
-        self._ready_missions = ["OnlyDriving"]
+        self._ready_missions = []
         self._intersection_checker = 0
         self._find_sign_sub = self.create_subscription(Image, "/color/image", self._callback_finder, 3)
         self._publish_command = self.create_publisher(String, '/sign', 1)
@@ -198,25 +198,30 @@ class Detect_Signs_Node(Node):
             if mission != 0 and ru_missions[mission] not in self._ready_missions:
                 self._missions_array.append(ru_missions[mission])
                 
-            if mission == 0 and len(self._missions_array) != 0 and self._missions_array.count(self._missions_array[0]) >= 2:
-                msg = String()
-                msg.data = self._missions_array[0]
-                self._publish_command.publish(msg)
+            if mission == 0 and len(self._missions_array) != 0 and (self._missions_array.count(self._missions_array[0]) >= 2 or (self._missions_array.count(self._missions_array[0]) == 1 and self._missions_array[0] == "TrafficIntersection")):
+                if self._missions_array[0] in self._ready_missions:
+                    self._missions_array = []
+                else:
+                    msg = String()
+                    msg.data = self._missions_array[0]
+                    self._publish_command.publish(msg)
 
-                self._ready_missions.append(self._missions_array[0])
-                self._missions_array = []
+                    self._ready_missions.append(self._missions_array[0])
+                    self._missions_array = [] 
 
            # self.get_logger().info(f"ready missions: {self._ready_missions}")
-           # self.get_logger().info(f"missions arr: {self._missions_array}")
-            if DEBUG_LEVEL >= 1:
-                if mission != 0 and ru_missions[mission] not in self._ready_missions:
-                    self.get_logger().info(f"Mission: {ru_missions[mission]}")
+            
+                #if DEBUG_LEVEL >= 1:
+                    #self.get_logger().info(f"Миссии: {self._ready_missions}")
+                    #if mission != 0 and ru_missions[mission] not in self._ready_missions:
+                        #self.get_logger().info(f"Mission: {ru_missions[mission]}")
 
                 #print("Mission: ", ru_missions[mission])
                 #print("-------------")
-                
-                cv2.imshow("detect_signs", train_img)
-                cv2.waitKey(1)
+            #self.get_logger().info(f"Миссии: {self._ready_missions}")
+            #self.get_logger().info(f"missions arr: {self._missions_array}")  
+            cv2.imshow("detect_signs", train_img)
+            cv2.waitKey(1)
 
 def main():
     rclpy.init()
