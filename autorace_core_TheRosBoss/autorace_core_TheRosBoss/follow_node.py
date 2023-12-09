@@ -71,9 +71,9 @@ class Follow_Trace_Node(Node):
         self._lidar_sub = self.create_subscription(
             LaserScan, '/scan', self.lidar_callback, 10)
 
-        self.__yellow_prevs = deque(maxlen=10)
+        self._yellow_prevs = deque(maxlen=10)
         self.__white_prevs = deque(maxlen=10)
-        self.__yellow_prevs.append(0)
+        self._yellow_prevs.append(0)
         self.__white_prevs.append(0)
 
         self.pose = Odometry()
@@ -90,8 +90,8 @@ class Follow_Trace_Node(Node):
         self.old_e = 0
         self.E = 0
 
-        self.STATUS_CAR = 0
-        self.TASK_LEVEL = 0
+        self.STATUS_CAR = 1
+        self.TASK_LEVEL = 1.5
 
         self.MAIN_LINE = "YELLOW"
 
@@ -166,10 +166,10 @@ class Follow_Trace_Node(Node):
         middle_row = yellow_mask[middle_h]
         try:
             first_notYellow = np.int32(np.where(middle_row == 255))[0][-1]
-            self.__yellow_prevs.append(first_notYellow)
+            self._yellow_prevs.append(first_notYellow)
         except:  # Если не смогли найти линию пользуемся последними данными о ней, в надежде что починится само
             first_notYellow = sum(
-                self.__yellow_prevs)//len(self.__yellow_prevs)
+                self._yellow_prevs)//len(self._yellow_prevs)
             self.point_status = False
 
         if DEBUG_LEVEL >= 3:
