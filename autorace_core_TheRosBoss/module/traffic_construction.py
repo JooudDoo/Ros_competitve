@@ -43,12 +43,36 @@ def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
 
     if DEBUG_LEVEL >= 3:
         # рисуем линию откуда идет конец желтой полосы
-        a = cv2.rectangle(yellow_mask, (first_notYellow+5,
-                            middle_h), (w, middle_h), 255, 10)
-        cv2.imshow("img_y", a)
+       #a = cv2.rectangle(yellow_mask, (first_notYellow+5,
+        #                    middle_h), (w, middle_h), 255, 10)
+        cv2.imshow("img_y", yellow_mask)
         cv2.waitKey(1)
 
-    return first_notYellow
+    return yellow_mask
+
+def check_white_color(follow_trace, perspectiveImg_, middle_h = None):
+        fix_part = 0 # значения для исправления обрезки пополам
+
+        if FOLLOW_ROAD_CROP_HALF:
+            h_, w_, _ = perspectiveImg_.shape
+            perspectiveImg = perspectiveImg_[:, w_//2:, :]
+            fix_part = w_//2
+        else:
+            perspectiveImg = perspectiveImg_
+
+        h, w, _ = perspectiveImg.shape
+        if middle_h is None:
+            middle_h = int(h * LINES_H_RATIO)
+
+        white_mask = cv2.inRange(
+            perspectiveImg, (250, 250, 250), (255, 255, 255))
+
+
+        if DEBUG_LEVEL >= 3:
+            cv2.imshow("img_w", white_mask)
+            cv2.waitKey(1)
+
+        return white_mask
 
 def avoid_walls(follow_trace, img):
     message = Twist()
@@ -60,8 +84,11 @@ def avoid_walls(follow_trace, img):
 
     # получаем координаты края желтой линии и белой
     yellow_mask = check_yellow_color(follow_trace, perspective, hLevelLine)
-    top_half = yellow_mask[:len(yellow_mask[0])//2,:]
-    down_half = yellow_mask[len(yellow_mask[0])//2:,:]
+    #follow_trace.get_logger().info(f"L {yellow_mask}")
+    top_half = yellow_mask[:int(len(yellow_mask[0])/1.3),:]
+    down_half = yellow_mask[int(len(yellow_mask[0])/1.3):,:]
+
+    white_mask = check_white_color(follow_trace, perspective, hLevelLine)
 
     scan_data=follow_trace.lidar_data.ranges
     front = min(scan_data[0:10]+scan_data[349:359])
@@ -69,7 +96,8 @@ def avoid_walls(follow_trace, img):
     right = min(scan_data[260:300])
 
     #follow_trace.get_logger().info(f"LIdar : {len(follow_trace.lidar_data.ranges)}")
-    follow_trace.get_logger().info(f"LIdar ищет")
+    follow_trace.get_logger().info(f"avoidance {follow_trace.start_avoid}")
+    #follow_trace.get_logger().info(f"ж {cv2.countNonZero(top_half)},{cv2.countNonZero(down_half)}")
     #if  2.0>follow_trace.lidar_data.ranges[0]>0.1 and (2.0>follow_trace.lidar_data.ranges[15]>0.1 and 2.0>follow_trace.lidar_data.ranges[345]>0.1):
     if front < 0.5:
 
@@ -83,17 +111,39 @@ def avoid_walls(follow_trace, img):
                 check = 0
                 break
         '''
-        #if(check):
-        follow_trace.start_avoid = 1
+        if(follow_trace.start_avoid < 1):
+            follow_trace.start_avoid = 1
         message.linear.x = 0.0
-        message.angular.z = 0.5
-    elif cv2.countNonZero(top_half) <= cv2.countNonZero(down_half) and follow_trace.start_avoid:
+
+        if 2 == follow_trace.start_avoid or 1.5 == follow_trace.start_avoid:
+            message.angular.z = -0.5
+            follow_trace.get_logger().info(f"поворачиваем в минус")
+        else:
+            message.angular.z = 0.5
+            follow_trace.get_logger().info(f"поворачиваем в плюс")
+
+    elif cv2.countNonZero(top_half) < cv2.countNonZero(down_half) and (1 == follow_trace.start_avoid or 1.5 == follow_trace.start_avoid) :
+        follow_trace.get_logger().info(f"желтая линия")
         message.linear.x = 0.0
         message.angular.z = -0.5
+        follow_trace.start_avoid = 1.5
+    elif follow_trace.start_avoid == 1.5 and cv2.countNonZero(top_half) == 0 and cv2.countNonZero(down_half)==0:
+        follow_trace.start_avoid = 2
     else:
         if follow_trace.start_avoid:
+            down = white_mask[int(len(white_mask[0])/2):,:]
+            top = white_mask[:int(len(white_mask[0])/2),:]
+            if follow_trace.start_avoid == 2 and (cv2.countNonZero(down) > cv2.countNonZero(top)):
+                
+                follow_trace.start_avoid = 0
+                follow_trace.TASK_LEVEL = 2.5
+            #follow_trace.get_logger().info(f"a {follow_trace.start_avoid == 2}")
+            #follow_trace.get_logger().info(f"б {cv2.countNonZero(down)>cv2.countNonZero(top)}")
+            follow_trace.get_logger().info(f"LIdar ищет")
             message.linear.x = follow_trace._linear_speed
             message.angular.z = 0.0
-
+   # if follow_trace.start_avoid == 2 and cv2.countNonZero(white_mask[int(len(yellow_mask[0])/1.3):,:]) > cv2.countNonZero(white_mask[:int(len(yellow_mask[0])/1.3),:]):
+   #     follow_trace.start_avoid == 0
+   #     follow_trace.TASK_LEVEL == 2.5
     if follow_trace.start_avoid: 
         follow_trace._robot_cmd_vel_pub.publish(message)   
