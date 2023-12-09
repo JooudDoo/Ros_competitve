@@ -15,6 +15,3 @@ cd sorev/v2
 . install/setup.bash
 ros2 run autorace_camera core_node_mission
 
-
-aboba
-model/robot/cmd_vel

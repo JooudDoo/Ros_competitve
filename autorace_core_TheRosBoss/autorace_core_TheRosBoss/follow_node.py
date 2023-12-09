@@ -86,6 +86,7 @@ class Follow_Trace_Node(Node):
         self.Kd = self.declare_parameter('Kd', value=0.25, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
 
+        self.start_avoid = 0
         self.old_e = 0
         self.E = 0
 
@@ -288,41 +289,41 @@ class Follow_Trace_Node(Node):
             check_direction(self, cvImg)
 
         if self.TASK_LEVEL == 2:
-            self.MAIN_LINE = "BOTH"
+            self.MAIN_LINE = "WHITE"
             avoid_walls(self, cvImg)
 
-        if self.TASK_LEVEL != 2:
-            # Выравниваем наш корабль
-            # если центры расходятся больше чем нужно
-            if (abs(direction) > OFFSET_BTW_CENTERS):
-                angle_to_goal = math.atan2(
-                    direction, 215)
-                #if DEBUG_LEVEL >= 1:
-                    #self.get_logger().info(
-                    #    f"Rotating dist: {abs(direction)}")
-                # self.get_logger().info(f"Angle Error: {angle_to_goal}")
-                angular_v = self._compute_PID(angle_to_goal)
-                emptyTwist.angular.z = angular_v
-                #self.get_logger().info(f"Angle Speed: {angular_v}")
-                #self.get_logger().info("----------------------------")
+        self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
+        # Выравниваем наш корабль
+        # если центры расходятся больше чем нужно
+        if (abs(direction) > OFFSET_BTW_CENTERS):
+            angle_to_goal = math.atan2(
+                direction, 215)
+            #if DEBUG_LEVEL >= 1:
+                #self.get_logger().info(
+                #    f"Rotating dist: {abs(direction)}")
+            # self.get_logger().info(f"Angle Error: {angle_to_goal}")
+            angular_v = self._compute_PID(angle_to_goal)
+            emptyTwist.angular.z = angular_v
+            #self.get_logger().info(f"Angle Speed: {angular_v}")
+            #self.get_logger().info("----------------------------")
 
-                emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
+            emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
 
-            if DEBUG_LEVEL >= 1:
-                # рисуем точки
-                persective_drawed = cv2.rectangle(
-                    perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
-                if self.point_status:
-                    persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
-                else:
-                    persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
-                # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
-                cv2.imshow("img", persective_drawed)
-                cv2.waitKey(1)
+        if DEBUG_LEVEL >= 1:
+            # рисуем точки
+            persective_drawed = cv2.rectangle(
+                perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
+            if self.point_status:
+                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
+            else:
+                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
+            # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
+            cv2.imshow("img", persective_drawed)
+            cv2.waitKey(1)
 
-            # изменение управление машинкой
-            if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1:
-                self._robot_cmd_vel_pub.publish(emptyTwist)
+        # изменение управление машинкой
+        if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1 and self.start_avoid == 0:
+            self._robot_cmd_vel_pub.publish(emptyTwist)
 
 
 def main():
