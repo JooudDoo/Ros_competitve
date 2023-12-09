@@ -90,8 +90,8 @@ class Follow_Trace_Node(Node):
         self.old_e = 0
         self.E = 0
 
-        self.STATUS_CAR = 0
-        self.TASK_LEVEL = 0
+        self.STATUS_CAR = 1
+        self.TASK_LEVEL = 1.5
 
         self.MAIN_LINE = "YELLOW"
 
@@ -124,7 +124,7 @@ class Follow_Trace_Node(Node):
         return euler[2]
 
     # Преобразование перспективы изображения
-    def __warpPerspective(self, cvImg):
+    def _warpPerspective(self, cvImg):
         h, w, _ = cvImg.shape
         top_x_offset = 50
 
@@ -257,7 +257,7 @@ class Follow_Trace_Node(Node):
         cvImg = cv2.cvtColor(cvImg, cv2.COLOR_RGB2BGR)
 
         # получаем изо перед колесами
-        perspective = self.__warpPerspective(cvImg)
+        perspective = self._warpPerspective(cvImg)
         perspective_h, persective_w, _ = perspective.shape
 
         hLevelLine = int(perspective_h*LINES_H_RATIO)
