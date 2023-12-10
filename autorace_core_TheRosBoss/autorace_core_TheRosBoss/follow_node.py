@@ -11,7 +11,7 @@ from module.config import (
     MAXIMUM_ANGLUAR_SPEED_CAP,
     MAX_LINIEAR_SPEED,
 
-    FOLLOW_ROAD_MODE,
+    LINE_HISTORY_SIZE,
     WHITE_MODE_CONSTANT,
     YELLOW_MODE_CONSTANT,
     FOLLOW_ROAD_CROP_HALF,
@@ -73,8 +73,8 @@ class Follow_Trace_Node(Node):
         self._lidar_sub = self.create_subscription(
             LaserScan, '/scan', self.lidar_callback, 10)
 
-        self._yellow_prevs = deque(maxlen=10)
-        self.__white_prevs = deque(maxlen=10)
+        self._yellow_prevs = deque(maxlen=LINE_HISTORY_SIZE)
+        self.__white_prevs = deque(maxlen=LINE_HISTORY_SIZE)
         self._yellow_prevs.append(0)
         self.__white_prevs.append(0)
 
