@@ -52,7 +52,7 @@ def stop_crosswalk(follow_trace, img):
 
     # получаем данные с лидара
     scan_data = follow_trace.lidar_data.ranges
-    front = min(scan_data[0:30]+scan_data[329:359])
+    front = min(scan_data[0:10]+scan_data[349:359])
     left = min(scan_data[40:80])
     right = min(scan_data[260:300])
 
@@ -75,7 +75,7 @@ def stop_crosswalk(follow_trace, img):
         log_info(follow_trace, "Едем в туннель", debug_level=1)
         follow_trace.TASK_LEVEL = 5
         follow_trace.avoidance = 0
-        
+
     else:
         log_info(follow_trace, "Никого нет, едем", debug_level=1)
         follow_trace.avoidance = 0
