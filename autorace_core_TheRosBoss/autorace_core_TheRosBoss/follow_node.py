@@ -22,6 +22,7 @@ from module.traffic_lights import check_traffic_lights
 from module.parking_space import parking
 from module.traffic_intersection import check_direction
 from module.traffic_construction import avoid_walls
+from module.pedestrian_crossing import stop_crosswalk
 
 import rclpy
 from rclpy.node import Node
@@ -291,6 +292,10 @@ class Follow_Trace_Node(Node):
         if self.TASK_LEVEL == 2:
             self.MAIN_LINE = "WHITE"
             avoid_walls(self, cvImg)
+
+        if self.TASK_LEVEL == 4:
+            self.MAIN_LINE = "WHITE"
+            stop_crosswalk(self, cvImg)
 
         #self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
         # Выравниваем наш корабль
