@@ -22,9 +22,9 @@ def check_direction(follow_trace, img):
         left_half = blue_mask[:,:250]
         right_half = blue_mask[:,250:]
 
-        cv2.imshow("mask_l", left_half)
-        cv2.imshow("mask_r", right_half)
-        cv2.waitKey(1)
+        # cv2.imshow("mask_l", left_half)
+        # cv2.imshow("mask_r", right_half)
+        # cv2.waitKey(1)
 
         if cv2.countNonZero(left_half) >= cv2.countNonZero(right_half):
             log_info(follow_trace, "[Перекресток] Поворот налево", debug_level=0)
