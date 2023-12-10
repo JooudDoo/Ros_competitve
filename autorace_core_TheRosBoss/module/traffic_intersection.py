@@ -19,8 +19,8 @@ def check_direction(follow_trace, img):
     if abs(angle) >= 2.80:
         blue_mask = check_blue_color(img)
         #follow_trace.get_logger().info(f"Angle: {follow_trace.get_angle()}")
-        left_half = blue_mask[:,:250]
-        right_half = blue_mask[:,250:]
+        left_half = blue_mask[:,:300]
+        right_half = blue_mask[:,300:]
 
         # cv2.imshow("mask_l", left_half)
         # cv2.imshow("mask_r", right_half)
