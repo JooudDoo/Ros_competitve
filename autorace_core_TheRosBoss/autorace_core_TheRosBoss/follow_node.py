@@ -5,7 +5,7 @@ from collections import deque
 # конфигуратор
 from module.config import (
     OFFSET_BTW_CENTERS, 
-    TASK_LEVEL,
+    # TASK_LEVEL,
     DEBUG_LEVEL, 
     LINES_H_RATIO,
     MAXIMUM_ANGLUAR_SPEED_CAP,
@@ -103,6 +103,9 @@ class Follow_Trace_Node(Node):
     # Переключение миссий в результате детекции знаков
     def _change_task(self, msg):
         task_name = msg.data
+
+        if DEBUG_LEVEL >= 2:
+            self.get_logger().info(f"Switch task to {task_name}")
 
         if task_name == "PedestrianCrossing":
             self.TASK_LEVEL = 4

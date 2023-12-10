@@ -209,17 +209,17 @@ class Detect_Signs_Node(Node):
                     self._ready_missions.append(self._missions_array[0])
                     self._missions_array = [] 
 
-           # self.get_logger().info(f"ready missions: {self._ready_missions}")
+            # self.get_logger().info(f"ready missions: {self._ready_missions}")
             
-                #if DEBUG_LEVEL >= 1:
-                    #self.get_logger().info(f"Миссии: {self._ready_missions}")
-                    #if mission != 0 and ru_missions[mission] not in self._ready_missions:
-                        #self.get_logger().info(f"Mission: {ru_missions[mission]}")
+            # if DEBUG_LEVEL >= 1:
+            #     self.get_logger().info(f"Миссии: {self._ready_missions}")
+            #     if mission != 0 and ru_missions[mission] not in self._ready_missions:
+            #         self.get_logger().info(f"Mission: {ru_missions[mission]}")
 
-                #print("Mission: ", ru_missions[mission])
-                #print("-------------")
-            #self.get_logger().info(f"Миссии: {self._ready_missions}")
-            #self.get_logger().info(f"missions arr: {self._missions_array}")  
+            #     print("Mission: ", ru_missions[mission])
+            #     print("-------------")
+            # self.get_logger().info(f"Миссии: {self._ready_missions}")
+            # self.get_logger().info(f"missions arr: {self._missions_array}")  
             cv2.imshow("detect_signs", train_img)
             cv2.waitKey(1)
 
