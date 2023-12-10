@@ -18,6 +18,8 @@ from module.config import (
     FOLLOW_ROAD_CROP_HALF,
     )
 
+from module.logger import log_info
+
 ### Уровни avoidance ###
 # 0 - не встретили еще ни разу препятствий, либо уже прошли миссию
 # 1 - встретили первое препятствие
@@ -54,11 +56,12 @@ def stop_crosswalk(follow_trace, img):
     left = min(scan_data[40:80])
     right = min(scan_data[260:300])
 
-    follow_trace.get_logger().info(f" Avoidance : {follow_trace.avoidance}")
+
+    log_info(follow_trace, f"Avoidance level: {follow_trace.avoidance}", debug_level=3, allow_repeat=True)
 
     # если человек идет и доехали до лежачего
     if front < 0.5 and cv2.countNonZero(yellow_mask) < 10:
-        follow_trace.get_logger().info(f"Человек пересекает дорогу")
+        log_info(follow_trace, "Человек пересекает дорогу", debug_level=1)
 
         message = Twist()
         message.linear.x = 0.0
@@ -69,10 +72,10 @@ def stop_crosswalk(follow_trace, img):
 
     # если человек прошел через дорогу
     elif follow_trace.avoidance == 1:
-        follow_trace.get_logger().info(f"Едем в туннель")
+        log_info(follow_trace, "Едем в туннель", debug_level=1)
         follow_trace.TASK_LEVEL = 5
         follow_trace.avoidance = 0
-
+        
     else:
-        follow_trace.get_logger().info(f"Никого нет, едем")
+        log_info(follow_trace, "Никого нет, едем", debug_level=1)
         follow_trace.avoidance = 0

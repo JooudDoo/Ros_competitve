@@ -18,6 +18,8 @@ from module.config import (
     FOLLOW_ROAD_CROP_HALF,
     )
 
+from module.logger import log_info
+
 # поиск желтого цвета
 def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
     h_, w_, _ = perspectiveImg_.shape
@@ -75,12 +77,11 @@ def avoid_walls(follow_trace, img):
     left = min(scan_data[40:80])
     right = min(scan_data[260:300])
 
-    follow_trace.get_logger().info(f" Avoidance : {follow_trace.avoidance}")
+    log_info(follow_trace, message=f" Avoidance : {follow_trace.avoidance}", debug_level=3)
 
     # если обнаружено препятствие впереди
     if front < 0.5:
-
-        follow_trace.get_logger().info(f"Обнаружено препятствие впереди, поворачиваем")
+        log_info(follow_trace, message=f"Обнаружено препятствие впереди, поворачиваем", debug_level=1)
 
         # если встретили препятствие первый раз, переключаем режим
         if(follow_trace.avoidance < 1):
@@ -95,7 +96,7 @@ def avoid_walls(follow_trace, img):
 
     # если успешно отвернулись от первого препятствия и доехали до желтой линии, не даем выйти роботу за ее пределы и меняем режим
     elif cv2.countNonZero(top_half) < cv2.countNonZero(down_half) and (1 <= follow_trace.avoidance <= 1.5) :
-        follow_trace.get_logger().info(f"Найдена желтая линия")
+        log_info(follow_trace, message=f"Найдена желтая линия", debug_level=1)
 
         message.linear.x = 0.0
         message.angular.z = -0.5
@@ -113,12 +114,12 @@ def avoid_walls(follow_trace, img):
 
             # если уже прошли препятствия и доехали до белой линии - миссия окончена
             if follow_trace.avoidance == 2 and (cv2.countNonZero(down) > cv2.countNonZero(top)):
-                follow_trace.get_logger().info(f"Миссия выполнена")
+                log_info(follow_trace, message=f"Миссия выполнена", debug_level=1)
                 follow_trace.avoidance = 0
                 follow_trace.TASK_LEVEL = 2.5
 
             # едем прямо
-            follow_trace.get_logger().info(f"Препятствий не обнаружено")
+            log_info(follow_trace, message=f"Препятствий не обнаружено", debug_level=1)
             message.linear.x = follow_trace._linear_speed
             message.angular.z = 0.0
 

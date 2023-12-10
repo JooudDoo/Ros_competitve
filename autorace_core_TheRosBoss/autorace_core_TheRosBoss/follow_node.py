@@ -23,6 +23,7 @@ from module.parking_space import parking
 from module.traffic_intersection import check_direction
 from module.traffic_construction import avoid_walls
 from module.pedestrian_crossing import stop_crosswalk
+from module.logger import log_info
 
 import rclpy
 from rclpy.node import Node
@@ -104,8 +105,7 @@ class Follow_Trace_Node(Node):
     def _change_task(self, msg):
         task_name = msg.data
 
-        if DEBUG_LEVEL >= 2:
-            self.get_logger().info(f"Switch task to {task_name}")
+        log_info(self, f"Смена задания на {task_name}", debug_level=1, msg_id=0, allow_repeat=True)
 
         if task_name == "PedestrianCrossing":
             self.TASK_LEVEL = 4

@@ -2,6 +2,8 @@
 import cv2
 import numpy as np
 
+from module.logger import log_info
+
 def check_blue_color(img):
     # Определение синего цвета в HSV
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -17,16 +19,17 @@ def check_direction(follow_trace, img):
     if abs(angle) >= 2.80:
         blue_mask = check_blue_color(img)
         #follow_trace.get_logger().info(f"Angle: {follow_trace.get_angle()}")
-        left_half = blue_mask[:,:400]
-        right_half = blue_mask[:,400:]
+        left_half = blue_mask[:,:250]
+        right_half = blue_mask[:,250:]
 
-        #cv2.imshow("mask", left_half)
-        #cv2.waitKey(1)
+        cv2.imshow("mask_l", left_half)
+        cv2.imshow("mask_r", right_half)
+        cv2.waitKey(1)
 
         if cv2.countNonZero(left_half) >= cv2.countNonZero(right_half):
-            follow_trace.get_logger().info(":ПОВОРОТ НАЛЕВО")
+            log_info(follow_trace, "[Перекресток] Поворот налево", debug_level=0)
             follow_trace.MAIN_LINE = "YELLOW"
         else:
-            follow_trace.get_logger().info(":ПОВОРОТ НАПРАВО")
+            log_info(follow_trace, "[Перекресток] Поворот направо", debug_level=0)
             follow_trace.MAIN_LINE = "WHITE"
         follow_trace.TASK_LEVEL = 1.5

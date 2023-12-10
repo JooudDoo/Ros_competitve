@@ -5,6 +5,8 @@
 import cv2
 import numpy as np
 
+from module.logger import log_info
+
 # Проверка зеленого цвета на экране
 def check_green_color(img):
     """
@@ -32,8 +34,8 @@ def check_traffic_lights(follow_trace, img):
     is_green_present = check_green_color(img)
 
     if is_green_present:
-        follow_trace.get_logger().info("ПЕДАЛЬ В ПОЛ !!!")
+        log_info(follow_trace, "Поехали", 0, msg_id=2)
         follow_trace.STATUS_CAR = 1
         follow_trace.TASK_LEVEL = 1
     else:
-        follow_trace.get_logger().info(":ЖДЕМ ЗЕЛЕНЫЙ ЦВЕТ")
+        log_info(follow_trace, "Ждём зеленый сигнал", 0)

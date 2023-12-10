@@ -42,3 +42,5 @@ TASK_LEVEL : Literal[0, 1, 2, 3, 4, 5] = 0
 # 1: движение
 # """
 STATUS_CAR : Literal[0, 1] = 0
+
+LOGGIN_POOL_SIZE = 2
