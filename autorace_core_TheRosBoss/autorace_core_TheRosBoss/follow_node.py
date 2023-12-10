@@ -86,12 +86,12 @@ class Follow_Trace_Node(Node):
         self.Kd = self.declare_parameter('Kd', value=0.25, descriptor=ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE)).get_parameter_value().double_value
 
-        self.start_avoid = 0
+        self.avoidance = 0
         self.old_e = 0
         self.E = 0
 
-        self.STATUS_CAR = 1
-        self.TASK_LEVEL = 1.5
+        self.STATUS_CAR = 0
+        self.TASK_LEVEL = 0
 
         self.MAIN_LINE = "YELLOW"
 
@@ -322,7 +322,7 @@ class Follow_Trace_Node(Node):
             cv2.waitKey(1)
 
         # изменение управление машинкой
-        if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1 and self.start_avoid == 0:
+        if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1 and self.avoidance == 0:
             self._robot_cmd_vel_pub.publish(emptyTwist)
 
 
