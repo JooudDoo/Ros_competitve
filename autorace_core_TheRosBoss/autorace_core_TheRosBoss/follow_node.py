@@ -4,9 +4,9 @@ from collections import deque
 # модули
 # конфигуратор
 from module.config import (
-    OFFSET_BTW_CENTERS, 
+    OFFSET_BTW_CENTERS,
     # TASK_LEVEL,
-    DEBUG_LEVEL, 
+    DEBUG_LEVEL,
     LINES_H_RATIO,
     MAXIMUM_ANGLUAR_SPEED_CAP,
     MAX_LINIEAR_SPEED,
@@ -15,14 +15,19 @@ from module.config import (
     WHITE_MODE_CONSTANT,
     YELLOW_MODE_CONSTANT,
     FOLLOW_ROAD_CROP_HALF,
-    )
+)
 
 # обработка светофора
 from module.traffic_lights import check_traffic_lights
-from module.parking_space import parking
+# обработка поворота
 from module.traffic_intersection import check_direction
+# обработка стен
 from module.traffic_construction import avoid_walls
+# обработка парковочного места
+from module.parking_space import parking
+# обработка пешеходного перехода
 from module.pedestrian_crossing import stop_crosswalk
+# обработка логов
 from module.logger import log_info
 
 import rclpy
@@ -43,6 +48,7 @@ import cv2
 import math
 import numpy as np
 
+
 class Follow_Trace_Node(Node):
 
     def __init__(self, linear_speed=MAX_LINIEAR_SPEED):
@@ -59,14 +65,16 @@ class Follow_Trace_Node(Node):
         """
         super().__init__("Follow_Trace_Node")
 
-        self.point_status = True # статус центровой точки дороги (True - актуально, False - устарела)
+        # статус центровой точки дороги (True - актуально, False - устарела)
+        self.point_status = True
 
         self._pose_sub = self.create_subscription(
             Odometry, '/odom', self.pose_callback, 10)
         self._robot_Ccamera_sub = self.create_subscription(
             Image, "/color/image", self._callback_Ccamera, 3)
         self._robot_cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
-        self._sign_subscriber  = self.create_subscription(String, '/sign', self._change_task, 1)
+        self._sign_subscriber = self.create_subscription(
+            String, '/sign', self._change_task, 1)
         self._cv_bridge = CvBridge()
 
         self._linear_speed = linear_speed
@@ -91,6 +99,7 @@ class Follow_Trace_Node(Node):
         self.avoidance = 0
         self.old_e = 0
         self.E = 0
+        self.parking_status = 0
 
         self.STATUS_CAR = 0
         self.TASK_LEVEL = 0
@@ -105,7 +114,8 @@ class Follow_Trace_Node(Node):
     def _change_task(self, msg):
         task_name = msg.data
 
-        log_info(self, f"Смена задания на {task_name}", debug_level=1, msg_id=0, allow_repeat=True)
+        log_info(self, f"Смена задания на {task_name}",
+                 debug_level=1, msg_id=0, allow_repeat=True)
 
         if task_name == "PedestrianCrossing":
             self.TASK_LEVEL = 4
@@ -117,9 +127,9 @@ class Follow_Trace_Node(Node):
             self.TASK_LEVEL = 3
         elif task_name == "Tunnel":
             self.TASK_LEVEL = 5
-        elif task_name in ["YELLOW", "WHITE"]: 
+        elif task_name in ["YELLOW", "WHITE"]:
             self.MAIN_LINE = task_name
-            
+
     # Получение угла поворота из данных о положении
     def get_angle(self):
         quaternion = (self.pose.pose.pose.orientation.x, self.pose.pose.pose.orientation.y,
@@ -153,7 +163,7 @@ class Follow_Trace_Node(Node):
         return cv2.flip(dst, 0)
 
     # Поиск желтой линии на изображении
-    def _find_yellow_line(self, perspectiveImg_, middle_h = None):
+    def _find_yellow_line(self, perspectiveImg_, middle_h=None):
         if FOLLOW_ROAD_CROP_HALF:
             h_, w_, _ = perspectiveImg_.shape
             perspectiveImg = perspectiveImg_[:, :w_//2, :]
@@ -186,8 +196,8 @@ class Follow_Trace_Node(Node):
         return first_notYellow
 
     # Поиск белой линии на изображении
-    def _find_white_line(self, perspectiveImg_, middle_h = None):
-        fix_part = 0 # значения для исправления обрезки пополам
+    def _find_white_line(self, perspectiveImg_, middle_h=None):
+        fix_part = 0  # значения для исправления обрезки пополам
 
         if FOLLOW_ROAD_CROP_HALF:
             h_, w_, _ = perspectiveImg_.shape
@@ -237,15 +247,10 @@ class Follow_Trace_Node(Node):
         self.old_e = e
         return w
 
+    # Обработка данных лидара
     def lidar_callback(self, data):
         # Обработка данных лидара
         self.lidar_data = data
-        #ranges = msg.ranges
-        #print('asd', self.TASK_LEVEL)
-
-        # # если у нас задание с парковкой
-        # if self.TASK_LEVEL == 5:
-        #     parking(self, ranges)
 
     # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg: Image):
@@ -296,41 +301,48 @@ class Follow_Trace_Node(Node):
             self.MAIN_LINE = "WHITE"
             avoid_walls(self, cvImg)
 
+        if self.TASK_LEVEL == 3:
+            self.MAIN_LINE = "YELLOW"
+            parking(self, cvImg)
+
         if self.TASK_LEVEL == 4:
             self.MAIN_LINE = "WHITE"
             stop_crosswalk(self, cvImg)
 
-        #self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
+        # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
         # Выравниваем наш корабль
         # если центры расходятся больше чем нужно
         if (abs(direction) > OFFSET_BTW_CENTERS):
             angle_to_goal = math.atan2(
                 direction, 215)
-            #if DEBUG_LEVEL >= 1:
-                #self.get_logger().info(
-                #    f"Rotating dist: {abs(direction)}")
+            # if DEBUG_LEVEL >= 1:
+            # self.get_logger().info(
+            #    f"Rotating dist: {abs(direction)}")
             # self.get_logger().info(f"Angle Error: {angle_to_goal}")
             angular_v = self._compute_PID(angle_to_goal)
             emptyTwist.angular.z = angular_v
-            #self.get_logger().info(f"Angle Speed: {angular_v}")
-            #self.get_logger().info("----------------------------")
+            # self.get_logger().info(f"Angle Speed: {angular_v}")
+            # self.get_logger().info("----------------------------")
 
-            emptyTwist.linear.x = abs(self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
+            emptyTwist.linear.x = abs(
+                self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
 
         if DEBUG_LEVEL >= 1:
             # рисуем точки
             persective_drawed = cv2.rectangle(
                 perspective, center_crds, center_crds, (0, 255, 0), 5)  # Центр изо
             if self.point_status:
-                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
+                persective_drawed = cv2.rectangle(
+                    persective_drawed, lines_center_crds, lines_center_crds, (0, 0, 255), 5)  # центр точки между линиями
             else:
-                persective_drawed = cv2.rectangle(persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
+                persective_drawed = cv2.rectangle(
+                    persective_drawed, lines_center_crds, lines_center_crds, (99, 99, 88), 5)  # центр точки между линиями
             # по сути пытаемся соединить центр изо с центром между линиями, т.е. поставить синюю точку на зеленую
             cv2.imshow("img", persective_drawed)
             cv2.waitKey(1)
 
         # изменение управление машинкой
-        if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1 and self.avoidance == 0:
+        if DEBUG_LEVEL < 4 and self.STATUS_CAR == 1 and self.avoidance == 0 and self.parking_status == 0:
             self._robot_cmd_vel_pub.publish(emptyTwist)
 
 

@@ -1,19 +1,22 @@
 colcon build
 
 1 терминал
-cd sorev/v2
+cd sorev/v3
 . install/setup.bash
 ros2 launch robot_bringup autorace_2023.launch.py
 
 2 терминал
-cd sorev/v2
+cd sorev/v3
 . install/setup.bash
 ros2 launch autorace_core_TheRosBoss autorace_core.launch.py
 
 3 терминал
-cd sorev/v2
+cd sorev/v3
 . install/setup.bash
 ros2 run referee_console mission_autorace_2023_referee
+
+teleop
+model/robot/cmd_vel
 
 ---------------------------------------------------------------
 
