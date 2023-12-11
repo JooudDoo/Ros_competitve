@@ -102,7 +102,7 @@ class Follow_Trace_Node(Node):
         self.parking_status = 0
 
         self.STATUS_CAR = 0
-        self.TASK_LEVEL = 0
+        self.TASK_LEVEL = 0 
 
         self.MAIN_LINE = "YELLOW"
 

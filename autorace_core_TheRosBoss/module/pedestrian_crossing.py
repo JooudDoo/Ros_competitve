@@ -27,17 +27,17 @@ from module.logger import log_info
 
 def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
     h_, w_, _ = perspectiveImg_.shape
-    perspectiveImg = perspectiveImg_[:, :w_//2, :]
+    perspectiveImg = perspectiveImg_[:, w_//2:, :]
 
     h, w, _ = perspectiveImg.shape
     if middle_h is None:
         middle_h = int(h * LINES_H_RATIO)
 
-    yellow_mask = cv2.inRange(perspectiveImg, (85, 140, 170), (100,190,225))
+    yellow_mask = cv2.inRange(perspectiveImg, (20, 40, 70), (60,80,90))
     yellow_mask = cv2.dilate(yellow_mask, np.ones((2, 2)), iterations=4)
 
-    #cv2.imshow("img_ye", yellow_mask)
-    #cv2.waitKey(1)
+    cv2.imshow("img_yee", yellow_mask)
+    cv2.waitKey(1)
     return yellow_mask
 
 def stop_crosswalk(follow_trace, img):
@@ -52,7 +52,8 @@ def stop_crosswalk(follow_trace, img):
 
     # получаем данные с лидара
     scan_data = follow_trace.lidar_data.ranges
-    front = min(scan_data[0:10]+scan_data[349:359])
+    
+    front = min(scan_data[0:20]+scan_data[340:359])
     left = min(scan_data[40:80])
     right = min(scan_data[260:300])
 
@@ -60,8 +61,8 @@ def stop_crosswalk(follow_trace, img):
     log_info(follow_trace, f"Avoidance level: {follow_trace.avoidance}", debug_level=3, allow_repeat=True)
 
     # если человек идет и доехали до лежачего
-    if front < 0.5 and cv2.countNonZero(yellow_mask) < 10:
-        log_info(follow_trace, "Человек пересекает дорогу", debug_level=1)
+    if front < 0.7 and cv2.countNonZero(yellow_mask) > 0:
+        log_info(follow_trace, "Человек пересекает дорогу", debug_level=1, allow_repeat=False)
 
         message = Twist()
         message.linear.x = 0.0
@@ -72,10 +73,10 @@ def stop_crosswalk(follow_trace, img):
 
     # если человек прошел через дорогу
     elif follow_trace.avoidance == 1:
-        log_info(follow_trace, "Едем в туннель", debug_level=1)
+        log_info(follow_trace, "Едем в туннель", debug_level=1, allow_repeat=False)
         follow_trace.TASK_LEVEL = 5
         follow_trace.avoidance = 0
 
     else:
-        log_info(follow_trace, "Никого нет, едем", debug_level=1)
+        log_info(follow_trace, "Никого нет, едем", debug_level=1, allow_repeat=False)
         follow_trace.avoidance = 0
