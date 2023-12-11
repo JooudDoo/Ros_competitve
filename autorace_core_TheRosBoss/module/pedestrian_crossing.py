@@ -36,8 +36,8 @@ def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
     yellow_mask = cv2.inRange(perspectiveImg, (20, 40, 70), (60,80,90))
     yellow_mask = cv2.dilate(yellow_mask, np.ones((2, 2)), iterations=4)
 
-    cv2.imshow("img_yee", yellow_mask)
-    cv2.waitKey(1)
+    # cv2.imshow("img_yee", yellow_mask)
+    # cv2.waitKey(1)
     return yellow_mask
 
 def stop_crosswalk(follow_trace, img):
