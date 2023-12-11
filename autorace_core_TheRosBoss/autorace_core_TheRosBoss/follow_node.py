@@ -10,6 +10,7 @@ from module.config import (
     LINES_H_RATIO,
     MAXIMUM_ANGLUAR_SPEED_CAP,
     MAX_LINIEAR_SPEED,
+    ANALOG_CAP_MODE,
 
     LINE_HISTORY_SIZE,
     WHITE_MODE_CONSTANT,
@@ -306,7 +307,7 @@ class Follow_Trace_Node(Node):
             parking(self, cvImg)
 
         if self.TASK_LEVEL == 4:
-            self.MAIN_LINE = "WHITE"
+            self.MAIN_LINE = "YELLOW"
             stop_crosswalk(self, cvImg)
 
         # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
@@ -324,6 +325,8 @@ class Follow_Trace_Node(Node):
             # self.get_logger().info(f"Angle Speed: {angular_v}")
             # self.get_logger().info("----------------------------")
 
+            if ANALOG_CAP_MODE:
+                angular_v *= 3/4
             emptyTwist.linear.x = abs(
                 self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
 
