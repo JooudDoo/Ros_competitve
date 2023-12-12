@@ -81,3 +81,4 @@ def stop_crosswalk(follow_trace, img):
     else:
         log_info(follow_trace, "Никого нет, едем", debug_level=1, allow_repeat=False)
         follow_trace.avoidance = 0
+        

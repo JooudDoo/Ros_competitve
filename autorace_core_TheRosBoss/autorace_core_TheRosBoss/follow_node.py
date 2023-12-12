@@ -47,6 +47,7 @@ from geometry_msgs.msg import Twist, Point, Quaternion
 from tf_transformations import euler_from_quaternion
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from sensor_msgs.msg import LaserScan
+# from std_msgs.msg.String import finish
 
 import cv2
 import math
@@ -79,6 +80,7 @@ class Follow_Trace_Node(Node):
         self._robot_cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
         self._sign_subscriber = self.create_subscription(
             String, '/sign', self._change_task, 1)
+        # self._sign_finish = self.create_publisher(finish ,'/robot_finish', 10)
         self._cv_bridge = CvBridge()
 
         self._linear_speed = linear_speed
@@ -104,9 +106,10 @@ class Follow_Trace_Node(Node):
         self.old_e = 0
         self.E = 0
         self.parking_status = 0
+        self.angle = 0
 
         self.STATUS_CAR = 0
-        self.TASK_LEVEL = 0 
+        self.TASK_LEVEL = 0
 
         self.MAIN_LINE = "YELLOW"
 
@@ -135,7 +138,6 @@ class Follow_Trace_Node(Node):
             self.TASK_LEVEL = 3
         elif task_name == "Tunnel":
             self.TASK_LEVEL = 5
-            self.tunnel_started = time.time()
         elif task_name in ["YELLOW", "WHITE"]:
             self.MAIN_LINE = task_name
 
@@ -317,10 +319,9 @@ class Follow_Trace_Node(Node):
         if self.TASK_LEVEL == 4 and (time.time() - self.pedestrian_started) > 2:
             self.MAIN_LINE = "YELLOW"
             stop_crosswalk(self, cvImg)
-
-        if self.TASK_LEVEL == 5 and (time.time() - self.tunnel_started) > 2:
+    
+        if self.TASK_LEVEL == 5:
             go_tunnel_space(self, cvImg)
-            return
 
         # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
         # Выравниваем наш корабль
