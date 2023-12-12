@@ -1,3 +1,4 @@
+import time
 from typing import Literal
 from collections import deque
 
@@ -109,6 +110,8 @@ class Follow_Trace_Node(Node):
 
         self.MAIN_LINE = "YELLOW"
 
+        self.tunnel_started = 0
+
     # Обратный вызов для получения данных о положении
     def pose_callback(self, data):
         self.pose = data
@@ -130,6 +133,7 @@ class Follow_Trace_Node(Node):
             self.TASK_LEVEL = 3
         elif task_name == "Tunnel":
             self.TASK_LEVEL = 5
+            self.tunnel_started = time.time()
         elif task_name in ["YELLOW", "WHITE"]:
             self.MAIN_LINE = task_name
 
@@ -312,8 +316,9 @@ class Follow_Trace_Node(Node):
             self.MAIN_LINE = "YELLOW"
             stop_crosswalk(self, cvImg)
 
-        if self.TASK_LEVEL == 5:
+        if self.TASK_LEVEL == 5 and (time.time() - self.tunnel_started) > 2:
             go_tunnel_space(self, cvImg)
+            return
 
         # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
         # Выравниваем наш корабль
@@ -321,14 +326,14 @@ class Follow_Trace_Node(Node):
         if (abs(direction) > OFFSET_BTW_CENTERS):
             angle_to_goal = math.atan2(
                 direction, 215)
-            # if DEBUG_LEVEL >= 1:
-            # self.get_logger().info(
-            #    f"Rotating dist: {abs(direction)}")
-            # self.get_logger().info(f"Angle Error: {angle_to_goal}")
             angular_v = self._compute_PID(angle_to_goal)
             emptyTwist.angular.z = angular_v
-            # self.get_logger().info(f"Angle Speed: {angular_v}")
-            # self.get_logger().info("----------------------------")
+            if DEBUG_LEVEL >= 3:
+                self.get_logger().info(
+                f"Rotating dist: {abs(direction)}")
+                self.get_logger().info(f"Angle Error: {angle_to_goal}")
+                self.get_logger().info(f"Angle Speed: {angular_v}")
+                self.get_logger().info("----------------------------")
 
             if ANALOG_CAP_MODE:
                 angular_v *= 3/4

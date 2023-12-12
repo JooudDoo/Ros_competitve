@@ -27,7 +27,7 @@ from module.logger import log_info
 
 def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
     h_, w_, _ = perspectiveImg_.shape
-    perspectiveImg = perspectiveImg_[:, w_//2:, :]
+    perspectiveImg = perspectiveImg_[:, 300:800:, :]
 
     h, w, _ = perspectiveImg.shape
     if middle_h is None:
@@ -36,8 +36,9 @@ def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
     yellow_mask = cv2.inRange(perspectiveImg, (20, 40, 70), (60,80,90))
     yellow_mask = cv2.dilate(yellow_mask, np.ones((2, 2)), iterations=4)
 
-    # cv2.imshow("img_yee", yellow_mask)
-    # cv2.waitKey(1)
+    cv2.imshow("img_yee", yellow_mask)
+    cv2.imshow("img_yeee", perspectiveImg_)
+    cv2.waitKey(1)
     return yellow_mask
 
 def stop_crosswalk(follow_trace, img):
@@ -53,7 +54,7 @@ def stop_crosswalk(follow_trace, img):
     # получаем данные с лидара
     scan_data = follow_trace.lidar_data.ranges
     
-    front = min(scan_data[0:20]+scan_data[340:359])
+    front = min(scan_data[0:18]+scan_data[340:359])
     left = min(scan_data[40:80])
     right = min(scan_data[260:300])
 

@@ -48,7 +48,7 @@ def parking(follow_trace, img):
     # выезжаем из парковки
     if follow_trace.parking_status == 5:
         log_info(follow_trace, message=f"Выезжаю на правую парковку", debug_level=1)
-        message.angular.z = -2.5
+        message.angular.z = -2.4
         message.linear.x = -0.13
         if right <= 0.6:
             follow_trace.parking_status = 7
