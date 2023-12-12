@@ -49,6 +49,8 @@ class Detect_Signs_Node(Node):
         self.traffic_left_image = self.__reduce_brightness(cv2.imread("autorace_core_TheRosBoss/signs/traffic_left.png")[:250, :])
         self.traffic_right_image = self.__reduce_brightness(cv2.imread("autorace_core_TheRosBoss/signs/traffic_right.png")[:250, :])
 
+        self.switch_camera = False
+
 
 
     def __angle3pt(self, a, b, c):
@@ -193,7 +195,10 @@ class Detect_Signs_Node(Node):
             ru_missions = ["OnlyDriving", "PedestrianCrossing", "TrafficConstruction", "TrafficIntersection","TrafficParking","Tunnel"]
             ru_intersect_missions = ["looking for sign", "turn left", "turn right"]
 
-            mission, train_img = self.__check_signs(cvImg[:240, 400:], self.pedestrian_crossing_image, self.traffic_construction_image, self.traffic_intersection_image, self.traffic_parking_image, self.tunnel_image)
+            if self.switch_camera:
+                mission, train_img = self.__check_signs(cvImg[:240, :200], self.pedestrian_crossing_image, self.traffic_construction_image, self.traffic_intersection_image, self.traffic_parking_image, self.tunnel_image)
+            else:
+                mission, train_img = self.__check_signs(cvImg[:240, 400:], self.pedestrian_crossing_image, self.traffic_construction_image, self.traffic_intersection_image, self.traffic_parking_image, self.tunnel_image)
                 
             if mission != 0 and ru_missions[mission] not in self._ready_missions:
                 self._missions_array.append(ru_missions[mission])
@@ -204,6 +209,8 @@ class Detect_Signs_Node(Node):
                 else:
                     msg = String()
                     msg.data = self._missions_array[0]
+                    if msg.data == "PedestrianCrossing":
+                        self.switch_camera = True
                     self._publish_command.publish(msg)
 
                     self._ready_missions.append(self._missions_array[0])
