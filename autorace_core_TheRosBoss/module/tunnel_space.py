@@ -1,12 +1,10 @@
-# Данный модуль предназначен для обработки места на парковке
-# если машина препаркована слева, то движемся на право иначе налево
-# останавливаемся в парковочном месте на опредеелнное время и возвращаемся на полосу
+# данный модуль отвечает за проез в тунель
 
 import numpy as np
 from geometry_msgs.msg import Twist
 from module.logger import log_info
 import time
-# from std_msgs.msg import String
+from std_msgs.msg import String
 
 
 def go_tunnel_space(follow_trace, img):
@@ -17,21 +15,24 @@ def go_tunnel_space(follow_trace, img):
     front = min(scan_data[0:3]+scan_data[356:359])
     angle = follow_trace.get_angle()
 
+    # заехали в тунель
     if follow_trace.avoidance == 0:
         log_info(follow_trace, message=f"заехали в тунель", debug_level=1)
         follow_trace.avoidance = 1
         follow_trace.angle = 0.50
-        if abs(angle) > 2.5:
+        if abs(angle) > 2.1:
             follow_trace.angle = 2.1
 
+    # вдоль первой стены
     if follow_trace.avoidance == 1:
         message.linear.x = follow_trace._linear_speed
-        print('front', front)
+        # print('front', front)
         if front < 0.55:
             log_info(follow_trace, message=f"поворот направо", debug_level=1)
             follow_trace.tunnel_started = time.time()
             follow_trace.avoidance = 2  
 
+    # вдоль второй стены
     if follow_trace.avoidance == 2:
         message.linear.x = follow_trace._linear_speed
         message.angular.z = 2.0
@@ -39,21 +40,24 @@ def go_tunnel_space(follow_trace, img):
         if abs(angle) < follow_trace.angle: #0.50:
             print(' ============== ', abs(angle), '  ', follow_trace.angle)
             message.angular.z = 0.0
-            print('time ', time.time() - follow_trace.tunnel_started)
+            # print('time ', time.time() - follow_trace.tunnel_started)
             if (time.time() - follow_trace.tunnel_started) > 14.5:
                 message.linear.x = 0.0
                 follow_trace.avoidance = 3
     
     if follow_trace.avoidance == 3:
-        log_info(follow_trace, message=f"===== Закончали =====", debug_level=1)
-        # msg = String()
-        # msg.data = "TheRosBoss"
-        # follow_trace._sign_finish.publish(msg)
-        message.linear.x = 0.0
+        follow_trace.tunnel_started = time.time()
         follow_trace.avoidance = 4
 
     if follow_trace.avoidance == 4:
+        log_info(follow_trace, message=f"===== Миссия выполнена =====", debug_level=1)
         message.linear.x = 0.0
+        # что бы точно остановились
+        if (time.time() - follow_trace.tunnel_started) > 1.0:
+            log_info(follow_trace, message=f"!!!!===== Финиш =====!!!!", debug_level=1)
+            msg = String()
+            msg.data = "TheRosBoss"
+            follow_trace._sign_finish.publish(msg)
         
 
 
