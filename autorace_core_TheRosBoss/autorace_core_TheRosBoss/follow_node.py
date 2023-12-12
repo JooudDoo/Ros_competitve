@@ -111,6 +111,7 @@ class Follow_Trace_Node(Node):
         self.MAIN_LINE = "YELLOW"
 
         self.tunnel_started = 0
+        self.pedestrian_started = 0
 
     # Обратный вызов для получения данных о положении
     def pose_callback(self, data):
@@ -125,6 +126,7 @@ class Follow_Trace_Node(Node):
 
         if task_name == "PedestrianCrossing":
             self.TASK_LEVEL = 4
+            self.tunnel_started = time.time()
         elif task_name == "TrafficConstruction":
             self.TASK_LEVEL = 2
         elif task_name == "TrafficIntersection":
@@ -312,7 +314,7 @@ class Follow_Trace_Node(Node):
             self.MAIN_LINE = "YELLOW"
             parking(self, cvImg)
 
-        if self.TASK_LEVEL == 4:
+        if self.TASK_LEVEL == 4 and (time.time() - self.pedestrian_started) > 2:
             self.MAIN_LINE = "YELLOW"
             stop_crosswalk(self, cvImg)
 

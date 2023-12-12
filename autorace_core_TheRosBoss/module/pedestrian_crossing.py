@@ -27,7 +27,7 @@ from module.logger import log_info
 
 def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
     h_, w_, _ = perspectiveImg_.shape
-    perspectiveImg = perspectiveImg_[:, 300:800:, :]
+    perspectiveImg = perspectiveImg_[:, 350:, :]
 
     h, w, _ = perspectiveImg.shape
     if middle_h is None:
