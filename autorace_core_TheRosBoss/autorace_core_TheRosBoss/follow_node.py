@@ -30,6 +30,8 @@ from module.parking_space import parking
 from module.pedestrian_crossing import stop_crosswalk
 # обработка логов
 from module.logger import log_info
+# обработка туннеля
+from module.tunnel_space import go_tunnel_space
 
 import rclpy
 from rclpy.node import Node
@@ -309,6 +311,9 @@ class Follow_Trace_Node(Node):
         if self.TASK_LEVEL == 4:
             self.MAIN_LINE = "YELLOW"
             stop_crosswalk(self, cvImg)
+
+        if self.TASK_LEVEL == 5:
+            go_tunnel_space(self, cvImg)
 
         # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
         # Выравниваем наш корабль
