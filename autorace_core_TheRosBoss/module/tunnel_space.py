@@ -59,8 +59,6 @@ def go_tunnel_space(follow_trace, img):
             msg.data = "TheRosBoss"
             follow_trace._sign_finish.publish(msg)
         
-
-
     #        # пооврачиваем
     # if follow_trace.avoidance == 1:
     #     log_info(follow_trace, message=f"поворот 1", debug_level=1)
