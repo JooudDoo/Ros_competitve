@@ -1,11 +1,11 @@
 # данный модуль отвечает за проез в тунель
 
-import numpy as np
-from geometry_msgs.msg import Twist
-from module.logger import log_info
 import time
+
+from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 
+from module.logger import log_info
 
 def go_tunnel_space(follow_trace, img):
     message = Twist()

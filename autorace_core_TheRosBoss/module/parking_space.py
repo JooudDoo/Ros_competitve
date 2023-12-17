@@ -2,10 +2,10 @@
 # если машина препаркована слева, то движемся на право иначе налево
 # останавливаемся в парковочном месте на опредеелнное время и возвращаемся на полосу
 
-import numpy as np
-from geometry_msgs.msg import Twist
-from module.logger import log_info
 import time
+from geometry_msgs.msg import Twist
+
+from module.logger import log_info
 
 def parking(follow_trace, img):
     message = Twist()

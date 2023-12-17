@@ -1,10 +1,5 @@
-from typing import Literal
-from collections import deque
-import os
-
 import rclpy
 from rclpy.node import Node
-from matplotlib import pyplot as plt
 
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
@@ -16,11 +11,7 @@ import cv2
 import math
 import numpy as np
 
-from module.config import (
-    DEBUG_LEVEL, 
-    TASK_LEVEL,
-    FOLLOW_ROAD_MODE
-    )
+from module.config import DEBUG_LEVEL
 
 
 class Detect_Signs_Node(Node):

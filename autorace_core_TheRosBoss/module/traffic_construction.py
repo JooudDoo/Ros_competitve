@@ -1,21 +1,12 @@
 # обработка миссии с обходом препятствий
+
 import cv2
 import numpy as np
-from sensor_msgs.msg import LaserScan
+
 from geometry_msgs.msg import Twist
 
 from module.config import (
-    OFFSET_BTW_CENTERS, 
-    TASK_LEVEL,
-    DEBUG_LEVEL, 
     LINES_H_RATIO,
-    MAXIMUM_ANGLUAR_SPEED_CAP,
-    MAX_LINIEAR_SPEED,
-
-    FOLLOW_ROAD_MODE,
-    WHITE_MODE_CONSTANT,
-    YELLOW_MODE_CONSTANT,
-    FOLLOW_ROAD_CROP_HALF,
     )
 
 from module.logger import log_info
