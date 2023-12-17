@@ -11,8 +11,8 @@ def go_tunnel_space(follow_trace, img):
     message = Twist()
 
     # получаем данные с лидара
-    scan_data = follow_trace.lidar_data.ranges
-    front = min(scan_data[0:3]+scan_data[356:359])
+    scan_data = follow_trace.lidar_data.ranges 
+    front = min(scan_data[356:359]) # scan_data[0:3]
     angle = follow_trace.get_angle()
 
     # заехали в тунель

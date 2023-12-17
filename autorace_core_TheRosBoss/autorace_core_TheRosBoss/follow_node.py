@@ -40,15 +40,14 @@ from rclpy.node import Node
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
+from cv_bridge import CvBridge
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist, Point, Quaternion
+from geometry_msgs.msg import Twist
 from tf_transformations import euler_from_quaternion
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String
-# from std_msgs.msg.String import finish
 
 import cv2
 import math
@@ -130,7 +129,7 @@ class Follow_Trace_Node(Node):
 
         if task_name == "PedestrianCrossing":
             self.TASK_LEVEL = 4
-            self.tunnel_started = time.time()
+            self.pedestrian_started = time.time()
         elif task_name == "TrafficConstruction":
             self.TASK_LEVEL = 2
         elif task_name == "TrafficIntersection":
@@ -139,6 +138,7 @@ class Follow_Trace_Node(Node):
             self.TASK_LEVEL = 3
         elif task_name == "Tunnel":
             self.TASK_LEVEL = 5
+            self.tunnel_started = int(time.time())
         elif task_name in ["YELLOW", "WHITE"]:
             self.MAIN_LINE = task_name
 
@@ -266,7 +266,6 @@ class Follow_Trace_Node(Node):
 
     # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg: Image):
-        print(os.path.dirname(os.path.abspath(__file__)))
 
         self.point_status = True
 
@@ -318,11 +317,11 @@ class Follow_Trace_Node(Node):
             self.MAIN_LINE = "YELLOW"
             parking(self, cvImg)
 
-        if self.TASK_LEVEL == 4 and (time.time() - self.pedestrian_started) > 2:
-            self.MAIN_LINE = "YELLOW"
+        if self.TASK_LEVEL == 4 and (time.time() - self.pedestrian_started) > 0.1:
+            self.MAIN_LINE = "WHITE"
             stop_crosswalk(self, cvImg)
     
-        if self.TASK_LEVEL == 5:
+        if self.TASK_LEVEL == 5 and (time.time() - self.tunnel_started) > 1:
             go_tunnel_space(self, cvImg)
 
         # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")

@@ -12,6 +12,7 @@ def parking(follow_trace, img):
 
     # получаем данные с лидара
     scan_data = follow_trace.lidar_data.ranges
+    front = min(scan_data[0:20] + scan_data[340:359])
     left = min(scan_data[50:80])
     right = min(scan_data[270:300])
     log_info(follow_trace, message=f"производим поворот на парковочное место", debug_level=1)
@@ -48,11 +49,11 @@ def parking(follow_trace, img):
     # выезжаем из парковки
     if follow_trace.parking_status == 5:
         log_info(follow_trace, message=f"Выезжаю на правую парковку", debug_level=1)
-        message.angular.z = -2.0
-        message.linear.x = -0.13
-        if right <= 0.6:
+        message.angular.z = -0.75
+        message.linear.x = -0.04
+        if right <= 0.35 or front <= 1:
             follow_trace.parking_status = 7
-            message.angular.z = 0.0
+            message.angular.z = 0.2
             message.linear.x = follow_trace._linear_speed/2
     if follow_trace.parking_status == 6:
         log_info(follow_trace, message=f"Выезжаю на левую парковку", debug_level=1)
@@ -61,7 +62,7 @@ def parking(follow_trace, img):
         if left <= 0.4:
             log_info(follow_trace, message=f"погнали дальше", debug_level=1)
             follow_trace.parking_status = 7
-            message.angular.z = 0.0
+            message.angular.z = 0.03
             message.linear.x = follow_trace._linear_speed/2
 
     # отправляем данные о скоростях
