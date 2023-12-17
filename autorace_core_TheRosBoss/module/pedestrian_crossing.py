@@ -66,6 +66,7 @@ def stop_crosswalk(follow_trace, img):
     elif follow_trace.avoidance == 1:
         log_info(follow_trace, "Едем в туннель", debug_level=1, allow_repeat=False)
         follow_trace.TASK_LEVEL = 4.5
+        follow_trace.MAIN_LINE = "WHITE"
         follow_trace.avoidance = 0
 
     else:

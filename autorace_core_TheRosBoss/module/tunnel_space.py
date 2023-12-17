@@ -13,7 +13,15 @@ def go_tunnel_space(follow_trace, img):
     # получаем данные с лидара
     scan_data = follow_trace.lidar_data.ranges 
     front = min(scan_data[356:359]) # scan_data[0:3]
+    left = min(scan_data[40:80])
+    right = min(scan_data[260:300])
     angle = follow_trace.get_angle()
+
+    if front >= 10 and left <= 0.3 and right <= 0.3:
+        log_info(follow_trace, message=f"===== Выехали =====", debug_level=1)
+        follow_trace.TASK_LEVEL = 0
+        follow_trace.avoidance = 0
+        time.sleep(0.5)
 
     # заехали в тунель
     if follow_trace.avoidance == 0:

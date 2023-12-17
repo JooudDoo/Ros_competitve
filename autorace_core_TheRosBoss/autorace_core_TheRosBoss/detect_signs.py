@@ -190,7 +190,7 @@ class Detect_Signs_Node(Node):
             if mission != 0 and ru_missions[mission] not in self._ready_missions:
                 self._missions_array.append(ru_missions[mission])
                 
-            if mission == 0 and len(self._missions_array) != 0 and (self._missions_array.count(self._missions_array[0]) >= 2 or (self._missions_array.count(self._missions_array[0]) == 1 and self._missions_array[0] == "TrafficIntersection")):
+            if mission == 0 and len(self._missions_array) != 0 and (self._missions_array.count(self._missions_array[0]) >= 2 or (self._missions_array.count(self._missions_array[0]) == 1 and self._missions_array[0] in ["TrafficIntersection", "Tunnel"])):
                 if self._missions_array[0] in self._ready_missions:
                     self._missions_array = []
                 else:

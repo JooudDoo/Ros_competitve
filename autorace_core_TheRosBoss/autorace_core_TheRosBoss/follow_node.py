@@ -111,7 +111,7 @@ class Follow_Trace_Node(Node):
         self.STATUS_CAR = 0
         self.TASK_LEVEL = 0
 
-        self.MAIN_LINE = "YELLOW"
+        self.MAIN_LINE = "WHITE"
 
         self.tunnel_started = 0
         self.pedestrian_started = 0
@@ -318,7 +318,6 @@ class Follow_Trace_Node(Node):
             parking(self, cvImg)
 
         if self.TASK_LEVEL == 4 and (time.time() - self.pedestrian_started) > 0.1:
-            self.MAIN_LINE = "WHITE"
             stop_crosswalk(self, cvImg)
     
         if self.TASK_LEVEL == 5 and (time.time() - self.tunnel_started) > 1:
@@ -327,7 +326,7 @@ class Follow_Trace_Node(Node):
         # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
         # Выравниваем наш корабль
         # если центры расходятся больше чем нужно
-        if (abs(direction) > OFFSET_BTW_CENTERS):
+        if (abs(direction) > OFFSET_BTW_CENTERS) and self.TASK_LEVEL != 5:
             angle_to_goal = math.atan2(
                 direction, 215)
             angular_v = self._compute_PID(angle_to_goal)
