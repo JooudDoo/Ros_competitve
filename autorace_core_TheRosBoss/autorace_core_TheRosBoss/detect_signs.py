@@ -10,8 +10,7 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge
 
-from rcl_interfaces.msg import ParameterDescriptor, ParameterType
-
+from ament_index_python.packages import get_package_share_directory
 
 import cv2
 import math
@@ -40,18 +39,19 @@ class Detect_Signs_Node(Node):
         self._publish_command = self.create_publisher(String, '/sign', 1)
         self._cv_bridge = CvBridge()
 
-        self.pedestrian_crossing_image = cv2.imread("autorace_core_TheRosBoss/signs/pedestrian_crossing_sign.png")
-        self.traffic_construction_image = cv2.imread("autorace_core_TheRosBoss/signs/traffic_construction.png") 
-        self.traffic_intersection_image = cv2.imread("autorace_core_TheRosBoss/signs/traffic_intersection.png") 
-        self.traffic_parking_image = cv2.imread("autorace_core_TheRosBoss/signs/traffic_parking.png")
-        self.tunnel_image = cv2.imread("autorace_core_TheRosBoss/signs/tunnel.png")
+        pkg_project_path = get_package_share_directory("autorace_core_TheRosBoss")
+        signs_path_folder = f"{pkg_project_path}/signs"
 
-        self.traffic_left_image = self.__reduce_brightness(cv2.imread("autorace_core_TheRosBoss/signs/traffic_left.png")[:250, :])
-        self.traffic_right_image = self.__reduce_brightness(cv2.imread("autorace_core_TheRosBoss/signs/traffic_right.png")[:250, :])
+        self.pedestrian_crossing_image = cv2.imread(f"{signs_path_folder}/pedestrian_crossing_sign.png")
+        self.traffic_construction_image = cv2.imread(f"{signs_path_folder}/traffic_construction.png") 
+        self.traffic_intersection_image = cv2.imread(f"{signs_path_folder}/traffic_intersection.png") 
+        self.traffic_parking_image = cv2.imread(f"{signs_path_folder}/traffic_parking.png")
+        self.tunnel_image = cv2.imread(f"{signs_path_folder}/tunnel.png")
+
+        self.traffic_left_image = self.__reduce_brightness(cv2.imread(f"{signs_path_folder}/traffic_left.png")[:250, :])
+        self.traffic_right_image = self.__reduce_brightness(cv2.imread(f"{signs_path_folder}/traffic_right.png")[:250, :])
 
         self.switch_camera = False
-
-
 
     def __angle3pt(self, a, b, c):
         """

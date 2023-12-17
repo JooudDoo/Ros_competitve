@@ -1,5 +1,5 @@
+import os
 import time
-from typing import Literal
 from collections import deque
 
 # модули
@@ -266,6 +266,7 @@ class Follow_Trace_Node(Node):
 
     # Обратный вызов для обработки данных с камеры
     def _callback_Ccamera(self, msg: Image):
+        print(os.path.dirname(os.path.abspath(__file__)))
 
         self.point_status = True
 
