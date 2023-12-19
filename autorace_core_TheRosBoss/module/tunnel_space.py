@@ -1,11 +1,31 @@
 # данный модуль отвечает за проез в тунель
-
+import cv2
+import math
 import time
+import numpy as np
 
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 
 from module.logger import log_info
+from module.config import (
+    ANALOG_CAP_MODE,
+    MAXIMUM_ANGLUAR_SPEED_CAP,
+    LINES_H_RATIO,
+    )
+
+def check_yellow_color(follow_trace, perspectiveImg_, middle_h = None):
+    h_, w_, _ = perspectiveImg_.shape
+    perspectiveImg = perspectiveImg_[:, 350:, :]
+
+    h, w, _ = perspectiveImg.shape
+    if middle_h is None:
+        middle_h = int(h * LINES_H_RATIO)
+
+    yellow_mask = cv2.inRange(perspectiveImg, (0, 240, 255), (0, 255, 255))
+    yellow_mask = cv2.dilate(yellow_mask, np.ones((2, 2)), iterations=4)
+
+    return cv2.countNonZero(yellow_mask) > 0
 
 def go_tunnel_space(follow_trace, img):
     message = Twist()
@@ -43,7 +63,7 @@ def go_tunnel_space(follow_trace, img):
     # вдоль второй стены
     if follow_trace.avoidance == 2:
         message.linear.x = follow_trace._linear_speed
-        message.angular.z = 2.0
+        message.angular.z = 0.85
         print('angle', abs(angle))
         if abs(angle) < follow_trace.angle: #0.50:
             print(' ============== ', abs(angle), '  ', follow_trace.angle)
@@ -53,19 +73,21 @@ def go_tunnel_space(follow_trace, img):
                 message.linear.x = 0.0
                 follow_trace.avoidance = 3
     
+
     if follow_trace.avoidance == 3:
         follow_trace.tunnel_started = time.time()
         follow_trace.avoidance = 4
-
+    
     if follow_trace.avoidance == 4:
         log_info(follow_trace, message=f"===== Миссия выполнена =====", debug_level=1)
         message.linear.x = 0.0
         # что бы точно остановились
-        if (time.time() - follow_trace.tunnel_started) > 1.0:
+        if (time.time() - follow_trace.tunnel_started) > 0.5:
             log_info(follow_trace, message=f"!!!!===== Финиш =====!!!!", debug_level=1)
             msg = String()
             msg.data = "TheRosBoss"
             follow_trace._sign_finish.publish(msg)
+    
         
     #        # пооврачиваем
     # if follow_trace.avoidance == 1:

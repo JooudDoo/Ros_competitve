@@ -57,8 +57,8 @@ def avoid_walls(follow_trace, img):
     hLevelLine = int(perspective_h*LINES_H_RATIO)
 
     yellow_mask = check_yellow_color(follow_trace, perspective, hLevelLine)
-    top_half = yellow_mask[:int(len(yellow_mask[0])/1.38),:]
-    down_half = yellow_mask[int(len(yellow_mask[0])/1.38):,:]
+    top_half = yellow_mask[:int(len(yellow_mask[0])/1.325),:]
+    down_half = yellow_mask[int(len(yellow_mask[0])/1.325):,:]
 
     white_mask = check_white_color(follow_trace, perspective, hLevelLine)
 

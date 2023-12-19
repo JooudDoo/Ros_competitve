@@ -51,6 +51,11 @@ def stop_crosswalk(follow_trace, img):
 
     log_info(follow_trace, f"Avoidance level: {follow_trace.avoidance}", debug_level=3, allow_repeat=True)
 
+    if follow_trace.pose.pose.pose.position.x > -1.9:
+        log_info(follow_trace, message=f"Срочно едем в туннель", debug_level=1)
+        follow_trace.TASK_LEVEL = 0
+        follow_trace.avoidance = 0
+
     # если человек идет и доехали до лежачего
     if front < 0.7 and cv2.countNonZero(yellow_mask) > 0:
         log_info(follow_trace, "Человек пересекает дорогу", debug_level=1, allow_repeat=False)

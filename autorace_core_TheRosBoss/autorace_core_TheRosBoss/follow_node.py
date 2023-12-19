@@ -113,6 +113,7 @@ class Follow_Trace_Node(Node):
 
         self.MAIN_LINE = "WHITE"
 
+        self.parking_end = 0
         self.tunnel_started = 0
         self.pedestrian_started = 0
 
@@ -137,7 +138,8 @@ class Follow_Trace_Node(Node):
         elif task_name == "TrafficParking":
             self.TASK_LEVEL = 3
         elif task_name == "Tunnel":
-            self.TASK_LEVEL = 5
+            if self.TASK_LEVEL + 1 > 5:
+                self.TASK_LEVEL = 5
             self.tunnel_started = int(time.time())
         elif task_name in ["YELLOW", "WHITE"]:
             self.MAIN_LINE = task_name
@@ -317,10 +319,17 @@ class Follow_Trace_Node(Node):
             self.MAIN_LINE = "YELLOW"
             parking(self, cvImg)
 
+        if self.TASK_LEVEL == 4 and (-2.663 < self.pose.pose.pose.position.x < -2.661 or 2.05 < self.pose.pose.pose.position.y < 2.09):
+            self.TASK_LEVEL = 5
+
+        if self.TASK_LEVEL == 3.5 and (time.time()-self.parking_end) > 8:
+            log_info(self, f"switch on white", debug_level=1)
+            self.MAIN_LINE = "WHITE"
+
         if self.TASK_LEVEL == 4 and (time.time() - self.pedestrian_started) > 0.1:
             stop_crosswalk(self, cvImg)
-    
-        if self.TASK_LEVEL == 5 and (time.time() - self.tunnel_started) > 1:
+
+        if self.TASK_LEVEL == 5 and (time.time() - self.tunnel_started) > 2:
             go_tunnel_space(self, cvImg)
 
         # self.get_logger().info(f"Task Level: {self.TASK_LEVEL}")
@@ -342,6 +351,7 @@ class Follow_Trace_Node(Node):
                 angular_v *= 3/4
             emptyTwist.linear.x = abs(
                 self._linear_speed * (MAXIMUM_ANGLUAR_SPEED_CAP - abs(angular_v)))
+        
 
         if DEBUG_LEVEL >= 1:
             # рисуем точки

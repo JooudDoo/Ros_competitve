@@ -86,4 +86,5 @@ def parking(follow_trace, img):
             time.sleep(3.0)
             follow_trace.parking_status = 0
             follow_trace.TASK_LEVEL = 3.5
+            follow_trace.parking_end = time.time()
             log_info(follow_trace, message=f"Миссия выполнена", debug_level=1)
